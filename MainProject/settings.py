@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,11 +25,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7x*_0qcvak#juhp1n*9-u_ek1dj(mcg*4u6q@u24pf@_4so0^d'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+print("HOST:", os.getenv("HOST"))  
+# SECURITY WARNING: Keep the secret key used in production secret!
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+# Debug Mode
+DEBUG = os.getenv("DEBUG") == "True"
 
 ALLOWED_HOSTS = []
 
@@ -99,23 +107,19 @@ WSGI_APPLICATION = 'MainProject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-
-     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "Project",  # Replace with your DB name
-        "USER": "root",        # Replace with your MySQL username
-        "PASSWORD": "King#123",# Replace with your MySQL password
-        "HOST": "localhost",           # Use "127.0.0.1" for local development
-        "PORT": "3306",                # Default MySQL port
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+"default": {
+        "ENGINE": os.getenv("ENGINE"),
+        "NAME": os.getenv("NAME"),
+        "USER": os.getenv("USER"),
+        "PASSWORD": os.getenv("PASSWORD"),
+        "HOST": os.getenv("HOST"),
+        "PORT": str(os.getenv("PORT")),  # Explicitly convert PORT to string
     },
 
-    # 'secondary': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
+    'secondary': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 
@@ -185,9 +189,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Email Configuration (using Gmail SMTP)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
-EMAIL_HOST_USER = "sameerkumar25254@gmail.com"  # Replace with your email
-EMAIL_HOST_PASSWORD = "ltsj wnrn djuj ewca"  # Replace with App Password
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
