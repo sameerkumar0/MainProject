@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+</head>
+<body>
+    <h2>Welcome, {{ employee.first_name }} {{ employee.last_name }}</h2>
+    <p>Email: {{ employee.email }}</p>
+    <p>Department: {{ employee.department }}</p>
+    <p>Phone: {{ employee.phone }}</p>
+
+    <h3>Your Assigned Tasks</h3>
+    <ul>
+        {% for task in tasks %}
+            <li><strong>{{ task.title }}</strong> - {{ task.status }}</li>
+        {% empty %}
+            <li>No tasks assigned yet.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="#">Logout</a> <!-- Logout link -->
+</body>
+</html>
