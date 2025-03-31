@@ -11,7 +11,10 @@ from django.contrib.auth.hashers import make_password
 import jwt
 import datetime
 from django.conf import settings
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from tasks.models import Task  
+from .models import CustomUser  
 
 User = get_user_model()
 
@@ -127,23 +130,33 @@ class ResetPasswordView(generics.GenericAPIView):
         
 
 
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from tasks.models import Task  # Import Task model
-from .models import CustomUser  # Import CustomUser model
 
-# @login_required
-def employee_dashboard(request):
+@login_required
+def employee_profile(request):
     user = request.user  # Get the logged-in employee (CustomUser instance)
-    
-    # Ensure only employees can access the dashboard
-    if user.role != "EMPLOYEE":
-        return render(request, "error.html", {"message": "Access Denied!"})
 
-    tasks = Task.objects.filter(assigned_to=user)  # Get assigned tasks
+    # Ensure only employees can access their own profile
+    if user.role.lower() != "manager":
+        return render(request, "error.html", {"message": "Access Denied!"})
 
     context = {
         'employee': user,
-        'tasks': tasks
     }
     return render(request, 'employee_dashboard.html', context)
+
+@login_required
+def employee_dashboard(request):
+    user = request.user  # Get the logged-in employee (CustomUser instance)
+
+    # Ensure only employees can access the dashboard
+    if user.role.lower() != "employee":
+        return render(request, "error.html", {"message": "Access Denied!"})
+
+    tasks = Task.objects.filter(assigned_to=user)  # Get tasks assigned to the employee
+
+    context = {
+        "employee": user,
+        "tasks": tasks,
+    }
+    return render(request, "employee_dashboard.html", context)
+

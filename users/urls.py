@@ -1,13 +1,15 @@
 from django.urls import path
 
-from .views import RegisterView,LoginView,ForgotPasswordView,ResetPasswordView,reset_password_page,employee_dashboard
+from .views import RegisterView,LoginView,ForgotPasswordView,ResetPasswordView,reset_password_page,employee_profile,employee_dashboard
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
 
     # employee
-    path('employee-dashboard/',employee_dashboard,name='Emp-dashboard'),
+    path("dashboard/", employee_dashboard, name="employee_dashboard"),
+    path("profile/", employee_profile, name="employee_profile"),
+    path("api/login/", LoginView.as_view(), name="api_login"),
 
 
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),

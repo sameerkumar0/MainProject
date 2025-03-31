@@ -1,26 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css"> <!-- Optional CSS file -->
-</head>
-<body>
-    <h2>Welcome, {{ employee.first_name }} {{ employee.last_name }}</h2>
-    <p>Email: {{ employee.email }}</p>
-    <p>Department: {{ employee.department }}</p>
-    <p>Phone: {{ employee.phone }}</p>
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
 
-    <h3>Your Assigned Tasks</h3>
-    <ul>
-        {% for task in tasks %}
-            <li><strong>{{ task.title }}</strong> - {{ task.status }}</li>
-        {% empty %}
-            <li>No tasks assigned yet.</li>
-        {% endfor %}
-    </ul>
+{% block content %}
+<h2>Login</h2>
+<form id="loginForm">
+    <label>Username:</label>
+    <input type="text" id="username" required>
+    <label>Password:</label>
+    <input type="password" id="password" required>
+    <button type="submit">Login</button>
+</form>
+<p id="errorMessage" style="color: red;"></p>
 
-    <a href="{% url 'logout' %}">Logout</a> <!-- Logout link -->
-</body>
-</html>
+<script>
+document.getElementById("loginForm").onsubmit = async function(event) {
+    event.preventDefault();
+    
+    let response = await fetch("/api/users/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    let data = await response.json();
+    
+    if (response.ok) {
+        localStorage.setItem("token", data.access);
+        window.location.href = data.redirect_url;  // ✅ Redirect to employee dashboard
+    } else {
+        document.getElementById("errorMessage").innerText = "Invalid Credentials!";
+    }
+};
+</script>
+{% endblock %}
