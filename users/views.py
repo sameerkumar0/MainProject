@@ -1,63 +1,78 @@
-from rest_framework import generics, permissions,status
+from rest_framework import generics,status
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .serializers import UserSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer
+from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerSerializer
 from notifications.email_services import send_email_notification
 import random
 import string
 from django.contrib.auth.hashers import make_password
-import jwt
-import datetime
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task  
-from .models import CustomUser  
+from .permissions import IsManager
+from rest_framework.permissions import AllowAny
+
 
 User = get_user_model()
-
-class RegisterView(generics.CreateAPIView):
+#employee Register
+class EmployeeRegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]
+    serializer_class = EmployeeSerializer
+    permission_classes = [IsManager]  
 
+    def perform_create(self, serializer):
+            try:
+                user = serializer.save()
+                email_subject = "Welcome to the Team!"
+                email_body = (
+                    f"Hello {user.first_name},\n\n"
+                    f"Your employee account has been created successfully!\n"
+                    f"Username: {user.username}\n"
+                    f"Email: {user.email}\n"
+                    f"Password: {user.raw_password}\n\n"
+                )
+                send_email_notification(user.email, email_subject, email_body)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#manager Register
+class ManagerRegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = ManagerSerializer
+    
     def perform_create(self, serializer):
         try:
             user = serializer.save()
-            email_subject = "Your Account Credentials"
-            email_body = (
-                f"Hello {user.first_name},\n\n"
-                f"Your account has been created successfully!\n"
-                f"Username: {user.username}\n"
-                f"Email: {user.email}\n"
-                f"Password: (password you entered during registration)\n\n"
-                f"Please keep your credentials secure."
-            )
+            email_subject = "Manager Account Created"
+            email_body = f"Hello {user.first_name},\n\nYour manager account has been created successfully!\n\n"
             send_email_notification(user.email, email_subject, email_body)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
+    permission_classes = [AllowAny]  # Anyone can log in
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
         if user:
             refresh = RefreshToken.for_user(user)
+            # Add role to the token payload
+            refresh['role'] = user.role  # Assuming your user model has a 'role' field
+
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "role": user.role
+                "role": user.role  # Send role in response
             })
-        return Response({"error": "Invalid credentials"}, status=400)
 
-        return Response(serializer.validated_data) 
-    
+        return Response({"error": "Invalid credentials"}, status=400)
 
 
 
