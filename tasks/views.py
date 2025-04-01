@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Task, DocumentRequest
 from .serializers import TaskSerializer, DocumentRequestSerializer
-from users.permissions import IsManager, IsEmployee
+from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
 from django.db import transaction
@@ -76,7 +76,7 @@ class DocumentRequestView(generics.ListCreateAPIView):
     """
     queryset = DocumentRequest.objects.all()
     serializer_class = DocumentRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsEmployee]
 
     def get_queryset(self):
         user = self.request.user

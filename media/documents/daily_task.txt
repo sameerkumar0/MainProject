@@ -1,0 +1,22 @@
+pattern problem
+
+square star pattern
+inverted pyramid star pattern
+pyramid star pattern
+diamond star pattern
+hollow square pattern
+butterfly pattern
+downward triangle pattern
+hollow diamond pattern
+cross pattern
+hollow pyramid pattern
+
+## array
+reverse an array
+find max and min of array
+rotate an array to the right by k steps
+find 2nd largest element in an array
+check if two array are rotations of each other 
+find all pairs in an array whose sum equals to target
+find the length of largest subarray with given sum
+

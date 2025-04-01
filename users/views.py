@@ -1,4 +1,4 @@
-from rest_framework import generics,status
+from rest_framework import generics,status,permissions
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,7 +12,7 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task  
-from .permissions import IsManager
+from tasks.permissions import IsManager
 from rest_framework.permissions import AllowAny
 
 
@@ -21,7 +21,7 @@ User = get_user_model()
 class EmployeeRegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [IsManager]  
+    permission_classes = [permissions.IsAuthenticated,IsManager]  
 
     def perform_create(self, serializer):
             try:
