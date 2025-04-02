@@ -4,134 +4,122 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manager Registration</title>
-    
-    <!-- Bootstrap 5 Dark Theme -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Custom CSS (if needed) -->
-    <link rel="stylesheet" href="/static/css/style.css">
-    
     <style>
-        /* Full-page dark background */
-        .register-page {
+        body {
+            background-color: #2e2727;
+            color: #ffffff;
+            font-family: 'Poppins', sans-serif;
             display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            background-color: #121212; /* Dark background */
-            color: #fff; /* Light text */
-            position: relative;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
         }
-
-        /* Center registration form */
-        .register-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        /* Card Styling */
-        .card {
-            background-color: #1e1e1e; /* Dark card */
-            border: 1px solid #333;
-            color: white;
-        }
-
-        .form-control {
-            background-color: #222;
-            border: 1px solid #444;
-            color: white;
-        }
-
-        .form-control:focus {
-            background-color: #333;
-            border-color: #007bff;
-            color: white;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #004085;
-        }
-
-        /* Navbar and Footer Styling */
-        .navbar, .footer {
-            background-color: #000;
-        }
-
-        /* Fixed Footer */
-        .footer {
+        .container {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
+            width: 400px;
             text-align: center;
-            color: white;
-            padding: 15px 0;
+            transition: transform 0.3s ease-in-out;
+        }
+        .container:hover {
+            transform: scale(1.02);
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #bb86fc;
+        }
+        input {
             width: 100%;
-            position: absolute;
-            bottom: 0;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 6px;
+            background: #333;
+            color: #fff;
+            font-size: 16px;
+            transition: background 0.3s ease-in-out;
+        }
+        input:focus {
+            background: #444;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #6200ea, #bb86fc);
+            color: #fff;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background 0.3s ease-in-out;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #3700b3, #9a67ea);
+        }
+        .login-link {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .login-link a {
+            color: #bb86fc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .login-link a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
-<body class="register-page"> <!-- Class added to target this page only -->
+<body>
+    <div class="container">
+        <h2>Register Manager</h2>
+        <form id="registerForm">
+            <input type="text" id="first_name" placeholder="First Name" required>
+            <input type="text" id="last_name" placeholder="Last Name" required>
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Register</button>
+        </form>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">My Website</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/login/">Login</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/register/">Register</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Registration Form (Fixed in Center) -->
-    <div class="container register-content">
-        <div class="card shadow-lg">
-            <div class="card-body">
-                <h2 class="text-center mb-4">Manager Registration</h2>
-                <form method="POST">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" name="password" required>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Register</button>
-                </form>
-            </div>
-        </div>
+        <p class="login-link">Already have an account? <a href="{% url 'login' %}">Login</a></p>
     </div>
 
-    <!-- Fixed Footer -->
-    <footer class="footer">
-        &copy; 2025 My Website. All rights reserved.
-    </footer>
+    <script>
+        document.getElementById("registerForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const formData = {
+                first_name: document.getElementById("first_name").value,
+                last_name: document.getElementById("last_name").value,
+                username: document.getElementById("username").value,
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            };
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/users/register/manager/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formData)
+                });
+                const data = await response.json();
 
+                if (response.ok) {
+                    alert("Manager registered successfully!");
+                    window.location.href = "{% url 'login' %}";  // Redirect to login
+                } else {
+                    alert(data.error || "Registration failed");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        });
+    </script>
 </body>
 </html>

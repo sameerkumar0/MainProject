@@ -11,9 +11,11 @@ from django.contrib.auth.hashers import make_password
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from tasks.models import Task  
+from tasks.models import Task 
+from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager
 from rest_framework.permissions import AllowAny
+
 
 
 User = get_user_model()
@@ -52,6 +54,11 @@ class ManagerRegisterView(generics.CreateAPIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+def register_manager(request):
+    return render(request, 'manager_register.html') 
+
+from django.urls import reverse
+
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]  # Anyone can log in
@@ -63,16 +70,28 @@ class LoginView(generics.GenericAPIView):
         user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
         if user:
             refresh = RefreshToken.for_user(user)
-            # Add role to the token payload
             refresh['role'] = user.role  # Assuming your user model has a 'role' field
+
+            # Define the redirect URL based on role
+            if user.role.lower() == UserRoles.EMPLOYEE:
+                redirect_url = reverse("employee_dashboard")  # Use Django URL name
+            elif user.role.lower() == UserRoles.MANAGER:
+                redirect_url = reverse("manager_dashboard")  # If you have a manager dashboard
+            else:
+                redirect_url = reverse("home")  # Default home page
 
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "role": user.role  # Send role in response
+                "role": user.role,
+                "redirect_url": request.build_absolute_uri(redirect_url)  # Full URL for redirection
             })
 
         return Response({"error": "Invalid credentials"}, status=400)
+
+
+def login_view(request):
+    return render(request, "login.html")
 
 
 
@@ -145,29 +164,16 @@ class ResetPasswordView(generics.GenericAPIView):
         
 
 
-
-@login_required
-def employee_profile(request):
-    user = request.user  # Get the logged-in employee (CustomUser instance)
-
-    # Ensure only employees can access their own profile
-    if user.role.lower() != "manager":
-        return render(request, "error.html", {"message": "Access Denied!"})
-
-    context = {
-        'employee': user,
-    }
-    return render(request, 'employee_dashboard.html', context)
-
 @login_required
 def employee_dashboard(request):
-    user = request.user  # Get the logged-in employee (CustomUser instance)
+    user = request.user  
 
-    # Ensure only employees can access the dashboard
-    if user.role.lower() != "employee":
+    # Ensure only employees can access their dashboard
+    if user.role != UserRoles.EMPLOYEE:
         return render(request, "error.html", {"message": "Access Denied!"})
 
-    tasks = Task.objects.filter(assigned_to=user)  # Get tasks assigned to the employee
+    # Fetch assigned tasks for the employee
+    tasks = Task.objects.filter(assigned_to=user)
 
     context = {
         "employee": user,
@@ -175,3 +181,20 @@ def employee_dashboard(request):
     }
     return render(request, "employee_dashboard.html", context)
 
+@login_required
+def manager_dashboard(request):
+    user = request.user  
+
+    # Ensure only managers can access their dashboard
+    if user.role.lower() != "manager":
+        return render(request, "error.html", {"message": "Access Denied!"})
+
+    employees = CustomUser.objects.filter(manager=user, role=UserRoles.EMPLOYEE)  # Assuming manager has related employees
+    tasks = Task.objects.filter(assigned_by=user)  # Tasks assigned by manager
+
+    context = {
+        "manager": user,
+        "employees": employees,
+        "tasks": tasks,
+    }
+    return render(request, "manager_dashboard.html", context)

@@ -8,12 +8,77 @@
 </head>
 <body class="bg-dark text-white">
     <div class="container py-5">
-        <h2 class="text-center">Welcome, Manager {{ user.username }}</h2>
+        <h2 class="text-center">Welcome, <span id="manager-name"></span></h2>
+        
         <div class="card p-4 text-dark">
             <h4>Dashboard Overview</h4>
             <p>Manage tasks, view progress, and assign tasks to employees.</p>
             <a href="/logout/" class="btn btn-danger">Logout</a>
         </div>
+
+        <!-- Employees Section -->
+        <div class="card mt-4 p-4 text-dark">
+            <h4>Employees</h4>
+            <ul id="employees-list" class="list-group"></ul>
+        </div>
+
+        <!-- Tasks Section -->
+        <div class="card mt-4 p-4 text-dark">
+            <h4>Assigned Tasks</h4>
+            <table class="table table-dark mt-3">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody id="tasks-table"></tbody>
+            </table>
+        </div>
     </div>
+
+    <script>
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch("/api/manager/dashboard/");
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById("manager-name").textContent = data.manager.username;
+
+                    // Populate employees list
+                    const employeesList = document.getElementById("employees-list");
+                    employeesList.innerHTML = "";
+                    data.employees.forEach(emp => {
+                        const li = document.createElement("li");
+                        li.className = "list-group-item";
+                        li.textContent = `${emp.username} (${emp.email})`;
+                        employeesList.appendChild(li);
+                    });
+
+                    // Populate tasks table
+                    const tasksTable = document.getElementById("tasks-table");
+                    tasksTable.innerHTML = "";
+                    data.tasks.forEach(task => {
+                        const row = `<tr>
+                            <td>${task.id}</td>
+                            <td>${task.title}</td>
+                            <td>${task.status}</td>
+                            <td>${task.assigned_to__username || "N/A"}</td>
+                        </tr>`;
+                        tasksTable.innerHTML += row;
+                    });
+                } else {
+                    alert(data.error || "Failed to load dashboard data");
+                }
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            }
+        }
+
+        fetchDashboardData();  // Load data when the page loads
+    </script>
 </body>
 </html>

@@ -39,6 +39,10 @@ class CustomUser(AbstractUser):
     profile_photo = models.ImageField(upload_to="profiles/", blank=True, null=True)
     tech_stack = models.TextField(blank=True, null=True)  # Only for employees
 
+
+    manager = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
+
     objects = CustomUserManager()  # Assign custom manager
 
     def is_manager(self):
