@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Registration</title>
+    <title>Employee Login</title>
     <style>
         body {
-            background-color: #2e2727;
+            background-color: #1e1e1e;
             color: #ffffff;
             font-family: 'Poppins', sans-serif;
             display: flex;
@@ -16,21 +16,17 @@
             margin: 0;
         }
         .container {
-            background: #1e1e1e;
+            background: #2e2e2e;
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
             width: 400px;
             text-align: center;
-            transition: transform 0.3s ease-in-out;
-        }
-        .container:hover {
-            transform: scale(1.02);
         }
         h2 {
             margin-bottom: 20px;
             font-size: 24px;
-            color: #bb86fc;
+            color: #4caf50;
         }
         input {
             width: 100%;
@@ -41,7 +37,6 @@
             background: #333;
             color: #fff;
             font-size: 16px;
-            transition: background 0.3s ease-in-out;
         }
         input:focus {
             background: #444;
@@ -52,74 +47,63 @@
             padding: 12px;
             border: none;
             border-radius: 6px;
-            background: linear-gradient(135deg, #6200ea, #bb86fc);
+            background: linear-gradient(135deg, #4caf50, #81c784);
             color: #fff;
             cursor: pointer;
             font-size: 18px;
             font-weight: bold;
-            transition: background 0.3s ease-in-out;
         }
         button:hover {
-            background: linear-gradient(135deg, #3700b3, #9a67ea);
-        }
-        .login-link {
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        .login-link a {
-            color: #bb86fc;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .login-link a:hover {
-            text-decoration: underline;
+            background: linear-gradient(135deg, #388e3c, #66bb6a);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Register Manager</h2>
-        <form id="registerForm">
-            <input type="text" id="first_name" placeholder="First Name" required>
-            <input type="text" id="last_name" placeholder="Last Name" required>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
 
-        <p class="login-link">Already have an account? <a href="{% url 'manager_login' %}">Login</a></p>
+    <div class="container">
+        <h2>Employee Login</h2>
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="hidden" id="csrf_token" value="{{ csrf_token }}"> 
+            <button type="submit">Login</button>
+        </form>
     </div>
 
     <script>
-        document.getElementById("registerForm").addEventListener("submit", async function(event) {
+        document.getElementById("loginForm").addEventListener("submit", async function(event) {
             event.preventDefault();
+            
             const formData = {
-                first_name: document.getElementById("first_name").value,
-                last_name: document.getElementById("last_name").value,
                 username: document.getElementById("username").value,
-                email: document.getElementById("email").value,
                 password: document.getElementById("password").value
             };
+            
+            const csrfToken = document.getElementById("csrf_token").value;
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/register/manager/", {
+                const response = await fetch("http://127.0.0.1:8000/api/users/login/employee/", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    },
                     body: JSON.stringify(formData)
                 });
+
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert("Manager registered successfully!");
-                    window.location.href = "{% url 'manager_login' %}";  // Redirect to login
+                    alert("Login successful!");
+                    window.location.href = data.redirect_url; 
                 } else {
-                    alert(data.error || "Registration failed");
+                    alert(data.error || "Login failed");
                 }
             } catch (error) {
                 console.error("Error:", error);
             }
         });
     </script>
+
 </body>
 </html>

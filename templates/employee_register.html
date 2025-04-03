@@ -84,11 +84,15 @@
             <input type="text" id="last_name" placeholder="Last Name" required>
             <input type="text" id="username" placeholder="Username" required>
             <input type="email" id="email" placeholder="Email" required>
+            <input type="phone" id="phone_number" placeholder="Phone" required>
             <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="tech_stacks" placeholder="Tech Stack" required>
+            
+
             <button type="submit">Register</button>
         </form>
 
-        <p class="login-link">Already have an account? <a href="{% url 'manager_login' %}">Login</a></p>
+        <p class="login-link">Already have an account? <a href="{% url 'login-page' %}">Login</a></p>
     </div>
 
     <script>
@@ -103,7 +107,7 @@
             };
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/register/manager/", {
+                const response = await fetch("http://127.0.0.1:8000/api/users/register/employee/", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(formData)
@@ -111,8 +115,8 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert("Manager registered successfully!");
-                    window.location.href = "{% url 'manager_login' %}";  // Redirect to login
+                    alert("Employee registered successfully!");
+                    window.location.href = "{% url 'login-page' %}";  // Redirect to login
                 } else {
                     alert(data.error || "Registration failed");
                 }

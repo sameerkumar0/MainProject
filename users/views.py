@@ -26,22 +26,31 @@ User = get_user_model()
 class EmployeeRegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [permissions.IsAuthenticated,IsManager]  
+    permission_classes = [permissions.AllowAny]  # Allow anyone to register
 
     def perform_create(self, serializer):
-            try:
-                user = serializer.save()
-                email_subject = "Welcome to the Team!"
-                email_body = (
-                    f"Hello {user.first_name},\n\n"
-                    f"Your employee account has been created successfully!\n"
-                    f"Username: {user.username}\n"
-                    f"Email: {user.email}\n"
-                    f"Password: {user.raw_password}\n\n"
-                )
-                send_email_notification(user.email, email_subject, email_body)
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
+            print("DEBUG: Saving user...")  # Check if function is triggered
+            user = serializer.save()
+            print(f"DEBUG: User created - {user.username}")
+
+            email_subject = "Welcome to the Team!"
+            email_body = (
+                f"Hello {user.first_name},\n\n"
+                f"Your employee account has been created successfully!\n"
+                f"Username: {user.username}\n"
+                f"Email: {user.email}\n\n"
+                "Please log in to your account to get started."
+            )
+            send_email_notification(user.email, email_subject, email_body)
+
+        except Exception as e:
+            print(f"DEBUG: Error - {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def register_emp(request):
+    return render(request, 'employee_register.html')
 
 #manager Register
 class ManagerRegisterView(generics.CreateAPIView):
@@ -63,36 +72,63 @@ def register_manager(request):
 
 
 
-class LoginView(generics.GenericAPIView):
+class EmployeeLoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
-    permission_classes = [AllowAny]  # Anyone can log in
+    permission_classes = [AllowAny]  # Allow any user to access login
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
+        print(f"DEBUG: Trying to authenticate {username}")  # Debugging
+        
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            print("DEBUG: Authentication failed")
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"DEBUG: Authenticated user {user.username} with role {user.role}")
+
+        if user.role.lower() == UserRoles.EMPLOYEE:
+            refresh = RefreshToken.for_user(user)
+            refresh['role'] = user.role  
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "role": user.role,
+                "redirect_url": request.build_absolute_uri(reverse("employee_dashboard"))
+            }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Unauthorized access"}, status=status.HTTP_400_BAD_REQUEST)
+
+def emp_login_page(request):
+   return render(request, 'employee_login.html')
+
+class ManagerLoginView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+    permission_classes = [AllowAny]  
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
-        if user:
+        if user and user.role.lower() == UserRoles.MANAGER:  # Ensure the user is a manager
             refresh = RefreshToken.for_user(user)
-            refresh['role'] = user.role  # Assuming your user model has a 'role' field
-
-            # Define the redirect URL based on role
-            if user.role.lower() == UserRoles.EMPLOYEE:
-                redirect_url = reverse("employee_dashboard")  # Use Django URL name
-            elif user.role.lower() == UserRoles.MANAGER:
-                redirect_url = reverse("manager_dashboard")  # If you have a manager dashboard
-            else:
-                redirect_url = reverse("home")  # Default home page
+            refresh['role'] = user.role  
 
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
                 "role": user.role,
-                "redirect_url": request.build_absolute_uri(redirect_url)  # Full URL for redirection
-            })
+                "redirect_url": request.build_absolute_uri(reverse("manager_dashboard"))
+            }, status=status.HTTP_200_OK)
 
-        return Response({"error": "Invalid credentials"}, status=400)
-
+        return Response({"error": "Invalid credentials or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
 
 def login_view(request):
     return render(request, "login.html")
@@ -204,7 +240,7 @@ class ManagerDashboardView(generics.GenericAPIView):
 
         return Response({
             "manager": {
-                "name": manager.first_name + " " + manager.last_name,
+                "username": manager.username,
                 "email": manager.email,
             },
             "employees": employee_data,

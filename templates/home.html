@@ -94,15 +94,17 @@
 </head>
 <body>
 
+    <!-- Navigation Bar -->
     <header>
         <div class="logo">Task Management</div>
         <nav class="nav-links">
             <a href="#">Home</a>
             <a href="#">Tasks</a>
-            <a href="">Logout</a>
+            <a href="{% url 'register-employee' %}">Register</a>  <!-- Register link -->
         </nav>
     </header>
 
+    <!-- Main Content -->
     <div class="container">
         <h1>Welcome to Task Management System</h1>
         <p>Assign, track, and manage tasks efficiently.</p>

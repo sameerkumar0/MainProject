@@ -1,24 +1,22 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-
+from django.contrib.auth.hashers import make_password
 User = get_user_model()
 
 class EmployeeSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'password', 'phone_number', 'profile_photo', 'tech_stack']
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
+        fields = ["first_name", "last_name", "username", "email", "password", "phone_number", "tech_stack"]
 
     def create(self, validated_data):
-        validated_data['role']='employee'
-        password = validated_data.pop('password')  # Extract raw password
+        validated_data["password"] = make_password(validated_data["password"])  # Hash password
+        validated_data["role"] = "employee"  # Explicitly set the role
+        
+        # Manually create the user to ensure the role is set correctly
         user = User.objects.create(**validated_data)
-        user.set_password(password)  # Hash and set password
-        user.save()
-        self.raw_password = password # Attach raw password for use in email
-        return user
+        return user 
 
 
 
