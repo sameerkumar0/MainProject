@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #2c1d1d;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        header {
+            width: 100%;
+            padding: 1rem;
+            background-color: #1e1e1e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            animation: slideDown 1s ease-in-out;
+        }
+        @keyframes slideDown {
+            from { top: -50px; }
+            to { top: 0; }
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007BFF;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 1rem;
+            transition: color 0.3s ease-in-out;
+        }
+        .nav-links a:hover {
+            color: #007BFF;
+        }
+        .container {
+            text-align: center;
+            animation: fadeIn 1.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .btn {
+            background-color: #007BFF;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+        }
+        .btn:hover {
+            transform: scale(1.1);
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Task Management</div>
+        <nav class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Tasks</a>
+            <a href="">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>Welcome to Task Management System</h1>
+        <p>Assign, track, and manage tasks efficiently.</p>
+        
+        <div class="buttons">
+            <a href="{% url 'login' %}" class="btn">Login as Manager</a>
+            <a href="{% url 'login' %}" class="btn">Login as Employee</a>
+        </div>
+    </div>
+
+</body>
+</html>

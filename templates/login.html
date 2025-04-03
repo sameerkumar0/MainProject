@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <style>
-        /* Dark theme styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: Arial, sans-serif;
         }
-
         body {
             background-color: #121212;
             color: white;
@@ -21,7 +19,6 @@
             align-items: center;
             height: 100vh;
         }
-
         .login-container {
             background-color: #1e1e1e;
             padding: 2rem;
@@ -30,16 +27,11 @@
             text-align: center;
             width: 350px;
         }
-
-        h2 {
-            margin-bottom: 1rem;
-        }
-
+        h2 { margin-bottom: 1rem; }
         .input-group {
             position: relative;
             margin-bottom: 1rem;
         }
-
         input {
             width: 100%;
             padding: 10px;
@@ -48,11 +40,7 @@
             border-radius: 5px;
             color: white;
         }
-
-        input::placeholder {
-            color: #bbb;
-        }
-
+        input::placeholder { color: #bbb; }
         button {
             width: 100%;
             padding: 10px;
@@ -64,16 +52,8 @@
             font-size: 1rem;
             transition: background 0.3s ease-in-out;
         }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        button:disabled {
-            background-color: #444;
-            cursor: not-allowed;
-        }
-
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #444; cursor: not-allowed; }
         .toggle-password {
             position: absolute;
             right: 10px;
@@ -83,25 +63,16 @@
             color: #bbb;
             font-size: 1.2rem;
         }
-
-        .toggle-password:hover {
-            color: white;
-        }
-
+        .toggle-password:hover { color: white; }
         .register-link {
             margin-top: 10px;
             font-size: 0.9rem;
         }
-
         .register-link a {
             color: #007BFF;
             text-decoration: none;
         }
-
-        .register-link a:hover {
-            text-decoration: underline;
-        }
-
+        .register-link a:hover { text-decoration: underline; }
         .error-message {
             color: red;
             font-size: 0.9rem;
@@ -127,56 +98,57 @@
     </div>
 
     <script>
-        document.getElementById("loginForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
-            const loginButton = document.getElementById("loginButton");
-            const errorMessage = document.getElementById("errorMessage");
-            errorMessage.textContent = ""; // Clear previous error message
+        document.addEventListener("DOMContentLoaded", async () => {
+    await fetchCSRFToken();
+});
 
-            const formData = {
-                username: document.getElementById("username").value,
-                password: document.getElementById("password").value
-            };
+let csrfToken = "";
 
-            loginButton.disabled = true; // Disable button to prevent multiple clicks
+async function fetchCSRFToken() {
+    try {
+        const response = await fetch("http://127.0.0.1:8000/api/users/csrf/", {
+            method: "GET",
+            credentials: "include",  // Ensures cookies are sent
+        });
+        const data = await response.json();
+        csrfToken = data.csrfToken;
+    } catch (error) {
+        console.error("Error fetching CSRF token:", error);
+    }
+}
 
-            try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/login/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData)
-                });
+document.getElementById("loginForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
 
-                const data = await response.json();
-                loginButton.disabled = false; // Re-enable button
+    const formData = {
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value
+    };
 
-                if (response.ok) {
-                    localStorage.setItem("access", data.access);  // Store token
-                    localStorage.setItem("refresh", data.refresh);
-
-                    // Redirect to the URL provided by the backend
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
-                    } else {
-                        errorMessage.textContent = "Login successful, but no redirect URL provided!";
-                    }
-                } else {
-                    errorMessage.textContent = data.error || "Invalid credentials";
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                errorMessage.textContent = "Something went wrong. Please try again.";
-                loginButton.disabled = false;
-            }
+    try {
+        const response = await fetch("http://127.0.0.1:8000/api/users/login/", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken  // Attach CSRF token here
+            },
+            body: JSON.stringify(formData),
+            credentials: "include"  // Ensures cookies are included
         });
 
-        // Toggle Password Visibility
-        function togglePassword() {
-            const passwordField = document.getElementById("password");
-            passwordField.type = passwordField.type === "password" ? "text" : "password";
+        const data = await response.json();
+
+        if (response.ok) {
+            localStorage.setItem("access", data.access);
+            localStorage.setItem("refresh", data.refresh);
+            window.location.href = data.redirect_url;  
+        } else {
+            alert("Invalid credentials");
         }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+});
     </script>
 </body>
 </html>
-
-

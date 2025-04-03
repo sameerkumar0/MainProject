@@ -15,6 +15,9 @@ from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager
 from rest_framework.permissions import AllowAny
+from django.urls import reverse
+from tasks.serializers import TaskSerializer
+
 
 
 
@@ -57,7 +60,8 @@ class ManagerRegisterView(generics.CreateAPIView):
 def register_manager(request):
     return render(request, 'manager_register.html') 
 
-from django.urls import reverse
+
+
 
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
@@ -181,20 +185,44 @@ def employee_dashboard(request):
     }
     return render(request, "employee_dashboard.html", context)
 
-@login_required
-def manager_dashboard(request):
-    user = request.user  
 
-    # Ensure only managers can access their dashboard
-    if user.role.lower() != "manager":
-        return render(request, "error.html", {"message": "Access Denied!"})
+# manager Dashboard 
 
-    employees = CustomUser.objects.filter(manager=user, role=UserRoles.EMPLOYEE)  # Assuming manager has related employees
-    tasks = Task.objects.filter(assigned_by=user)  # Tasks assigned by manager
+class ManagerDashboardView(generics.GenericAPIView):
+    """
+    API for managers to view their assigned employees, tasks, and tech stacks.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
-    context = {
-        "manager": user,
-        "employees": employees,
-        "tasks": tasks,
-    }
-    return render(request, "manager_dashboard.html", context)
+    def get(self, request, *args, **kwargs):
+        manager = request.user
+        employees = User.objects.filter(manager=manager, role="employee")  # Get all employees under manager
+        tasks = Task.objects.filter(assigned_by=manager)  # Get all tasks assigned by manager
+
+        employee_data = EmployeeSerializer(employees, many=True).data
+        task_data = TaskSerializer(tasks, many=True).data
+
+        return Response({
+            "manager": {
+                "name": manager.first_name + " " + manager.last_name,
+                "email": manager.email,
+            },
+            "employees": employee_data,
+            "tasks": task_data,
+        })
+    
+def dashboard_Page(request):
+    return render(request,'manager_dashboard.html')
+
+
+from django.middleware.csrf import get_token
+from django.http import JsonResponse
+
+def get_csrf_token(request):
+    return JsonResponse({"csrfToken": get_token(request)})
+
+def home(request):
+    return render (request,'home.html')
+
+
+
