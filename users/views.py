@@ -130,8 +130,8 @@ class ManagerLoginView(generics.GenericAPIView):
 
         return Response({"error": "Invalid credentials or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
 
-def login_view(request):
-    return render(request, "login.html")
+def manager_login_page(request):
+    return render(request, "manager_login.html")
 
 
 
