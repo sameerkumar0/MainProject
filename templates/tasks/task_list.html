@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { text-align: center; }
+        .container { max-width: 800px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007BFF; color: white; }
+        .status { padding: 5px 10px; border-radius: 5px; }
+        .status.pending { background-color: orange; color: black; }
+        .status.in_progress { background-color: yellow; color: black; }
+        .status.completed { background-color: green; color: white; }
+        button { padding: 5px 10px; margin-top: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Task Management</h1>
+    <div class="container">
+        <h2>Your Tasks</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Assigned By</th>
+                    <th>Status</th>
+                    <th>Update Status</th>
+                </tr>
+            </thead>
+            <tbody id="taskTable"></tbody>
+        </table>
+        <h2>Create New Task (Manager Only)</h2>
+        <form id="taskForm">
+            <input type="text" id="title" placeholder="Task Title" required>
+            <input type="text" id="assignedTo" placeholder="Assign to (Email)" required>
+            <button type="submit">Create Task</button>
+        </form>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", fetchTasks);
+        document.getElementById("taskForm").addEventListener("submit", createTask);
+        async function fetchTasks() {
+            const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
+                headers: { "Authorization": `Bearer ${localStorage.getItem("access")}` }
+            });
+            const tasks = await response.json();
+            document.getElementById("taskTable").innerHTML = tasks.map(task => `
+                <tr>
+                    <td>${task.title}</td>
+                    <td>${task.assigned_by}</td>
+                    <td class="status ${task.status}">${task.status.replace("_", " ")}</td>
+                    <td>
+                        <select class="statusSelect" data-id="${task.id}">
+                            <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
+                            <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
+                            <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
+                        </select>
+                        <button onclick="updateStatus(${task.id})">Update</button>
+                    </td>
+                </tr>
+            `).join("");
+        }
+        async function updateStatus(taskId) {
+            const newStatus = document.querySelector(`select[data-id='${taskId}']`).value;
+            await fetch(`http://127.0.0.1:8000/api/tasks/update/${taskId}/`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("access")}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            fetchTasks();
+        }
+        async function createTask(event) {
+            event.preventDefault();
+            const title = document.getElementById("title").value;
+            const assignedTo = document.getElementById("assignedTo").value;
+            await fetch("http://127.0.0.1:8000/api/tasks/create/", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("access")}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ title, assigned_to: assignedTo })
+            });
+            fetchTasks();
+        }
+    </script>
+</body>
+</html>

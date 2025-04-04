@@ -3,13 +3,13 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerSerializer
+from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
 from notifications.email_services import send_email_notification
 import random
 import string
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task 
 from.models import CustomUser,UserRoles
@@ -19,21 +19,19 @@ from django.urls import reverse
 from tasks.serializers import TaskSerializer
 
 
-
-
 User = get_user_model()
 #employee Register
 class EmployeeRegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [permissions.AllowAny]  # Allow anyone to register
+    permission_classes = [permissions.AllowAny]  # Anyone can register
 
     def perform_create(self, serializer):
         try:
-            print("DEBUG: Saving user...")  # Check if function is triggered
             user = serializer.save()
-            print(f"DEBUG: User created - {user.username}")
+            print(f"DEBUG: Employee created - {user.username}")
 
+            # Send a welcome email (optional)
             email_subject = "Welcome to the Team!"
             email_body = (
                 f"Hello {user.first_name},\n\n"
@@ -42,93 +40,98 @@ class EmployeeRegisterView(generics.CreateAPIView):
                 f"Email: {user.email}\n\n"
                 "Please log in to your account to get started."
             )
-            send_email_notification(user.email, email_subject, email_body)
+            # send_email_notification(user.email, email_subject, email_body)  # Uncomment if you have email sending set up
 
         except Exception as e:
             print(f"DEBUG: Error - {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 def register_emp(request):
     return render(request, 'employee_register.html')
 
+
 #manager Register
 class ManagerRegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = ManagerSerializer
-    
+    queryset = CustomUser.objects.all()
+    serializer_class = ManagerRegisterSerializer
+    permission_classes = [permissions.AllowAny]  # Anyone can register
+
     def perform_create(self, serializer):
         try:
             user = serializer.save()
+            print(f"DEBUG: Manager created - {user.username}")
+
+            # Send a welcome email (optional)
             email_subject = "Manager Account Created"
-            email_body = f"Hello {user.first_name},\n\nYour manager account has been created successfully!\n\n"
-            send_email_notification(user.email, email_subject, email_body)
+            email_body = (
+                f"Hello {user.first_name},\n\n"
+                f"Your manager account has been created successfully!\n"
+                f"Username: {user.username}\n"
+                f"Email: {user.email}\n\n"
+                "You can now manage your team and assign tasks."
+            )
+            send_email_notification(user.email, email_subject, email_body)  # Uncomment if you have email sending set up
+
         except Exception as e:
+            print(f"DEBUG: Error - {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
 def register_manager(request):
     return render(request, 'manager_register.html') 
 
 
 
-
 class EmployeeLoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
-    permission_classes = [AllowAny]  # Allow any user to access login
+    permission_classes = [AllowAny]  # Public access
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
-        
-        print(f"DEBUG: Trying to authenticate {username}")  # Debugging
-        
-        user = authenticate(username=username, password=password)
+        user = serializer.validated_data["user"]
 
-        if not user:
-            print("DEBUG: Authentication failed")
-            return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
+        if user.role != UserRoles.EMPLOYEE:
+            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
 
-        print(f"DEBUG: Authenticated user {user.username} with role {user.role}")
+        refresh = RefreshToken.for_user(user)
+        refresh["role"] = user.role  # Attach role to token
 
-        if user.role.lower() == UserRoles.EMPLOYEE:
-            refresh = RefreshToken.for_user(user)
-            refresh['role'] = user.role  
-            return Response({
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "role": user.role,
-                "redirect_url": request.build_absolute_uri(reverse("employee_dashboard"))
-            }, status=status.HTTP_200_OK)
-
-        return Response({"error": "Unauthorized access"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "role": user.role,
+            "redirect_url": request.build_absolute_uri(reverse("employee_dashboard"))
+        }, status=status.HTTP_200_OK)
 
 def emp_login_page(request):
    return render(request, 'employee_login.html')
 
+
 class ManagerLoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]  # Public access
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
-        if user and user.role.lower() == UserRoles.MANAGER:  # Ensure the user is a manager
-            refresh = RefreshToken.for_user(user)
-            refresh['role'] = user.role  
+        user = serializer.validated_data["user"]
 
-            return Response({
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "role": user.role,
-                "redirect_url": request.build_absolute_uri(reverse("manager_dashboard"))
-            }, status=status.HTTP_200_OK)
+        if user.role != UserRoles.MANAGER:
+            return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
 
-        return Response({"error": "Invalid credentials or unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+        refresh = RefreshToken.for_user(user)
+        refresh["role"] = user.role  # Attach role to token
+
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "role": user.role,
+            "redirect_url": request.build_absolute_uri(reverse("list_employees"))
+        }, status=status.HTTP_200_OK)
+    
 
 def manager_login_page(request):
     return render(request, "manager_login.html")
@@ -207,11 +210,6 @@ class ResetPasswordView(generics.GenericAPIView):
 @login_required
 def employee_dashboard(request):
     user = request.user  
-
-    # Ensure only employees can access their dashboard
-    if user.role != UserRoles.EMPLOYEE:
-        return render(request, "error.html", {"message": "Access Denied!"})
-
     # Fetch assigned tasks for the employee
     tasks = Task.objects.filter(assigned_to=user)
 
@@ -232,7 +230,7 @@ class ManagerDashboardView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         manager = request.user
-        employees = User.objects.filter(manager=manager, role="employee")  # Get all employees under manager
+        employees = User.objects.filter(role="employee")  # Get all employees under manager
         tasks = Task.objects.filter(assigned_by=manager)  # Get all tasks assigned by manager
 
         employee_data = EmployeeSerializer(employees, many=True).data
@@ -260,5 +258,17 @@ def get_csrf_token(request):
 def home(request):
     return render (request,'home.html')
 
+class EmployeeListView(generics.ListAPIView):
+    """
+    View to get all registered employees.
+    Only Managers can access this list.
+    """
+    serializer_class = EmployeeSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManager] 
 
+    def get_queryset(self):
+        return CustomUser.objects.filter(role="Employee")
+    
 
+def list_employee(request):
+    return render(request,'employee_list.html')

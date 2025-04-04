@@ -56,6 +56,19 @@
         button:hover {
             background: linear-gradient(135deg, #388e3c, #66bb6a);
         }
+        .register-link {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        .register-link a {
+            color: #ffca28;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .register-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +81,11 @@
             <input type="hidden" id="csrf_token" value="{{ csrf_token }}"> 
             <button type="submit">Login</button>
         </form>
+
+        <!-- Register Link -->
+        <div class="register-link">
+            Don't have an account? <a href="{% url 'register-employee' %}">Register</a>
+        </div>
     </div>
 
     <script>

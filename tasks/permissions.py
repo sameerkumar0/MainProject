@@ -1,12 +1,12 @@
 from rest_framework.permissions import BasePermission
+from rest_framework import permissions
 
-class IsManager(BasePermission):
+class IsManager(permissions.BasePermission):
     """
-    Custom permission to grant access only to Managers.
+    Custom permission to allow only Managers to access certain views.
     """
     def has_permission(self, request, view):
-         return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'manager')
-
+        return request.user.is_authenticated and getattr(request.user, "role", None) == "Manager"
 
 class IsEmployee(BasePermission):
     """

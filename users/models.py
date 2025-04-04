@@ -13,6 +13,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
         extra_fields.setdefault("is_active", True)
+
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)  # Hash the password
         user.save(using=self._db)
@@ -39,11 +40,14 @@ class CustomUser(AbstractUser):
     profile_photo = models.ImageField(upload_to="profiles/", blank=True, null=True)
     tech_stack = models.TextField(blank=True, null=True)  # Only for employees
 
-
+    # Many employees can have one manager
     manager = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="employees"
+    )
 
     objects = CustomUserManager()  # Assign custom manager
+
+    REQUIRED_FIELDS = ["email"]  # Required for user creation
 
     def is_manager(self):
         return self.role == UserRoles.MANAGER

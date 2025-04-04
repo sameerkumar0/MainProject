@@ -4,51 +4,216 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manager Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #422b2b;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            padding-top: 60px;
+        }
+        header {
+            width: 100%;
+            padding: 1rem;
+            background-color: #1e1e1e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007BFF;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 1rem;
+            transition: color 0.3s ease-in-out;
+        }
+        .nav-links a:hover {
+            color: #007BFF;
+        }
+        .container {
+            width: 80%;
+            margin-top: 40px;
+            text-align: center;
+            animation: fadeIn 1s ease-in-out;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e1e1e;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        tr:hover {
+            background-color: #292929;
+        }
+        .status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .status.pending {
+            background-color: orange;
+            color: black;
+        }
+        .status.in_progress {
+            background-color: yellow;
+            color: black;
+        }
+        .status.completed {
+            background-color: green;
+            color: white;
+        }
+        .update-btn {
+            padding: 5px 10px;
+            background: #007BFF;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .update-btn:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Manager Dashboard</div>
+        <nav class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Logout</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>Assigned Tasks</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Employee</th>
+                    <th>Assigned Date</th>
+                    <th>Submission Date</th>
+                    <th>Status</th>
+                    <th>Update Status</th>
+                </tr>
+            </thead>
+            <tbody id="taskTableBody">
+                <!-- Tasks will be loaded dynamically -->
+            </tbody>
+        </table>
+    </div>
+
     <script>
-        async function loadDashboard() {
-            const token = localStorage.getItem("access");
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchTasks();
+        });
 
-            const response = await fetch("http://127.0.0.1:8000/api/users/manager/dashboard/", {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
+        async function fetchTasks() {
+            const accessToken = localStorage.getItem("access");
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/manager/tasks/", {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
 
-            if (!response.ok) {
-                alert("Failed to load dashboard");
-                return;
+                const tasks = await response.json();
+                if (response.ok) {
+                    displayTasks(tasks);
+                } else {
+                    console.error("Error fetching tasks:", tasks);
+                }
+            } catch (error) {
+                console.error("Error:", error);
             }
+        }
 
-            const data = await response.json();
-            document.getElementById("manager-name").innerText = data.manager.name;
+        function displayTasks(tasks) {
+            const taskTableBody = document.getElementById("taskTableBody");
+            taskTableBody.innerHTML = "";
 
-            // Display Employees
-            let employeeTable = document.getElementById("employee-table");
-            data.employees.forEach(emp => {
-                let row = `<tr>
-                    <td>${emp.first_name} ${emp.last_name}</td>
-                    <td>${emp.email}</td>
-                    <td>${emp.tech_stacks.join(", ")}</td>
-                </tr>`;
-                employeeTable.innerHTML += row;
+            tasks.forEach(task => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${task.title}</td>
+                    <td>${task.employee_name}</td>
+                    <td>${task.assigned_date}</td>
+                    <td>${task.submission_date}</td>
+                    <td>
+                        <span class="status ${task.status}">
+                            ${task.status.replace("_", " ")}
+                        </span>
+                    </td>
+                    <td>
+                        <select class="update-status" data-task-id="${task.id}">
+                            <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
+                            <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
+                            <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
+                        </select>
+                        <button class="update-btn" onclick="updateTaskStatus(${task.id})">Update</button>
+                    </td>
+                `;
+                taskTableBody.appendChild(row);
             });
         }
 
-        document.addEventListener("DOMContentLoaded", loadDashboard);
+        async function updateTaskStatus(taskId) {
+            const accessToken = localStorage.getItem("access");
+            const newStatus = document.querySelector(`select[data-task-id="${taskId}"]`).value;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/manager/tasks/update/${taskId}/`, {
+                    method: "PATCH",
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    alert("Task status updated!");
+                    fetchTasks();
+                } else {
+                    alert("Error updating task");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
     </script>
-</head>
-<body>
-
-    <h2>Welcome, <span id="manager-username"></span></h2>
-
-    <h3>Employees & Tech Stacks</h3>
-    <table border="1">
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Tech Stack</th>
-        </tr>
-        <tbody id="employee-table"></tbody>
-    </table>
-
 </body>
 </html>

@@ -21,10 +21,3 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
-class DocumentRequest(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='document_requests')
-    requested_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('fulfilled', 'Fulfilled')], default='pending')
-
-    def __str__(self):
-        return f"Request by {self.requested_by} for {self.task.title}"

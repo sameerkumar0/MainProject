@@ -1,29 +1,48 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Task, DocumentRequest
-from .serializers import TaskSerializer, DocumentRequestSerializer
+from .models import Task
+from .serializers import TaskSerializer
 from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
 from django.db import transaction
+from django.shortcuts import render
+from rest_framework.exceptions import ValidationError
 
 class TaskCreateView(generics.CreateAPIView):
     """
-    Only Managers can create new tasks.
+    Only Managers can create new tasks and assign them to Employees.
     """
     serializer_class = TaskSerializer
-    permission_classes = [ IsManager]
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def perform_create(self, serializer):
-        user = self.request.user
+        user = self.request.user  # The logged-in manager
+        
+        # Get assigned_to user from request data
+        assigned_to = serializer.validated_data.get("assigned_to")
+        
+        # Ensure assigned_to is an employee
+        if not assigned_to or assigned_to.role != "employee":
+            raise ValidationError({"assigned_to": "Tasks can only be assigned to employees."})
+
         with transaction.atomic():  # Ensures atomicity
-            task = serializer.save(assigned_by=user)
-            send_email_notification(
-                task.assigned_to.email,
-                "New Task Assigned",
-                f"You have been assigned a new task: {task.title}"
-            )
+            task = serializer.save(assigned_by=user)  # Assign task with manager info
+
+            # Send email notification
+            if assigned_to.email:
+                send_email_notification(
+                    recipient_email=assigned_to.email,
+                    subject="New Task Assigned",
+                    message=f"Dear {assigned_to.username},\n\n"
+                            f"You have been assigned a new task: {task.title}.\n"
+                            f"Description: {task.description}\n\n"
+                            f"Best regards,\n{user.username}"
+                )
+
+def task_create(request):
+    return render(request,'tasks/task_create.html') 
 
 class TaskListView(generics.ListAPIView):
     """
@@ -38,6 +57,11 @@ class TaskListView(generics.ListAPIView):
         if user.role == 'manager':
             return Task.objects.all()  # Managers see all tasks
         return Task.objects.filter(assigned_to=user)
+    
+
+def task_list(request):
+    return render(request,'tasks/task_list.html')
+
 
 class TaskUpdateStatusView(generics.UpdateAPIView):
     """
@@ -68,36 +92,4 @@ class TaskUpdateStatusView(generics.UpdateAPIView):
             return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class DocumentRequestView(generics.ListCreateAPIView):
-    """
-    Employees can request documents for tasks they are assigned to.
-    Managers can view all document requests.
-    """
-    queryset = DocumentRequest.objects.all()
-    serializer_class = DocumentRequestSerializer
-    permission_classes = [permissions.IsAuthenticated,IsEmployee]
-
-    def get_queryset(self):
-        user = self.request.user
-        try:
-            if user.role == 'manager':
-                return DocumentRequest.objects.all()  # Managers see all requests
-            return DocumentRequest.objects.filter(requested_by=user)  # Employees see only their own requests
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def perform_create(self, serializer):
-        user = self.request.user
-        try:
-            task = serializer.validated_data.get('task')
-
-            if task.assigned_to != user:
-                return Response({'error': 'You can only request documents for your assigned tasks'}, status=status.HTTP_403_FORBIDDEN)
-
-            serializer.save(requested_by=user)
-
-        except Task.DoesNotExist:
-            return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

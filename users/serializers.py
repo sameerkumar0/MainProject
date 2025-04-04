@@ -1,44 +1,67 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-User = get_user_model()
+from .models import CustomUser, UserRoles
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
-        model = User
+        model = CustomUser
         fields = ["first_name", "last_name", "username", "email", "password", "phone_number", "tech_stack"]
 
     def create(self, validated_data):
         validated_data["password"] = make_password(validated_data["password"])  # Hash password
-        validated_data["role"] = "employee"  # Explicitly set the role
-        
-        # Manually create the user to ensure the role is set correctly
-        user = User.objects.create(**validated_data)
-        return user 
-
-
-
-# manager
-class ManagerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'password', 'phone_number', 'profile_photo']
-        extra_kwargs = {
-            'password': {'write_only': True}
-        }
-
-    def create(self, validated_data):
-        validated_data['role'] = 'manager'  # Automatically set role to Manager
-        user = User.objects.create_user(**validated_data)
+        validated_data["role"] = UserRoles.EMPLOYEE  # Set role explicitly
+        user = CustomUser.objects.create(**validated_data)
         return user
 
 
 
+# manager
+class ManagerRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    class Meta:
+        model = CustomUser
+        fields = ["first_name", "last_name", "username", "email", "password", "phone_number"]
+
+    def create(self, validated_data):
+        validated_data["password"] = make_password(validated_data["password"])  # Hash password
+        validated_data["role"] = UserRoles.MANAGER  # Set role explicitly
+        user = CustomUser.objects.create(**validated_data)
+        return user
+
+
+
+
+
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import CustomUser
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        username = data.get("username")
+        password = data.get("password")
+
+        if not username or not password:
+            raise serializers.ValidationError("Username and password are required.")
+
+        user = authenticate(username=username, password=password)
+
+        if not user:
+            raise serializers.ValidationError("Invalid credentials.")
+
+        if not user.is_active:
+            raise serializers.ValidationError("User account is disabled.")
+
+        data["user"] = user  # Attach the authenticated user to the validated data
+        return data
+
+
 
 
 class ForgotPasswordSerializer(serializers.Serializer):

@@ -113,7 +113,7 @@
         <div class="logo">Employee Dashboard</div>
         <nav class="nav-links">
             <a href="#">Home</a>
-            <a href="{% url 'logout' %}">Logout</a>
+            <a href="#">Logout</a>
         </nav>
     </header>
 
@@ -136,12 +136,15 @@
     </div>
 
     <script>
+        let tasksCache = {}; // Store task data to check for updates
+
         document.addEventListener("DOMContentLoaded", function() {
             fetchTasks();
+            setInterval(fetchTasks, 10000); // Refresh tasks every 10 seconds
         });
 
         async function fetchTasks() {
-            const accessToken = localStorage.getItem("access"); // Fetch JWT token
+            const accessToken = localStorage.getItem("access"); 
             try {
                 const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
                     headers: {
@@ -152,7 +155,7 @@
 
                 const tasks = await response.json();
                 if (response.ok) {
-                    displayTasks(tasks);
+                    updateTasks(tasks);
                 } else {
                     console.error("Error fetching tasks:", tasks);
                 }
@@ -161,33 +164,42 @@
             }
         }
 
-        function displayTasks(tasks) {
+        function updateTasks(tasks) {
             const taskTableBody = document.getElementById("taskTableBody");
-            taskTableBody.innerHTML = "";
 
             tasks.forEach(task => {
-                const row = document.createElement("tr");
+                if (!tasksCache[task.id] || tasksCache[task.id].status !== task.status) {
+                    tasksCache[task.id] = task; // Update cache
+                    const existingRow = document.querySelector(`tr[data-task-id='${task.id}']`);
 
-                row.innerHTML = `
-                    <td>${task.title}</td>
-                    <td>${task.assigned_date}</td>
-                    <td>${task.submission_date}</td>
-                    <td>
-                        <span class="status ${task.status}">
-                            ${task.status.replace("_", " ")}
-                        </span>
-                    </td>
-                    <td>
-                        <select class="update-status" data-task-id="${task.id}">
-                            <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
-                            <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
-                            <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
-                        </select>
-                        <button class="update-btn" onclick="updateTaskStatus(${task.id})">Update</button>
-                    </td>
-                `;
-
-                taskTableBody.appendChild(row);
+                    if (existingRow) {
+                        existingRow.querySelector(".status").innerText = task.status.replace("_", " ");
+                        existingRow.querySelector(".status").className = `status ${task.status}`;
+                        existingRow.querySelector(`select[data-task-id='${task.id}']`).value = task.status;
+                    } else {
+                        const row = document.createElement("tr");
+                        row.setAttribute("data-task-id", task.id);
+                        row.innerHTML = `
+                            <td>${task.title}</td>
+                            <td>${task.assigned_date}</td>
+                            <td>${task.submission_date}</td>
+                            <td>
+                                <span class="status ${task.status}">
+                                    ${task.status.replace("_", " ")}
+                                </span>
+                            </td>
+                            <td>
+                                <select class="update-status" data-task-id="${task.id}">
+                                    <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
+                                    <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
+                                    <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
+                                </select>
+                                <button class="update-btn" onclick="updateTaskStatus(${task.id})">Update</button>
+                            </td>
+                        `;
+                        taskTableBody.appendChild(row);
+                    }
+                }
             });
         }
 
@@ -208,7 +220,7 @@
                 const result = await response.json();
                 if (response.ok) {
                     alert("Task status updated!");
-                    fetchTasks(); // Reload tasks
+                    fetchTasks();
                 } else {
                     alert("Error updating task: " + result.error);
                 }
