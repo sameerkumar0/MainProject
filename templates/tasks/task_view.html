@@ -1,0 +1,153 @@
+<!-- Task Detail Page -->
+<div class="task-detail">
+    <h2>Task Details</h2>
+    <div id="task-detail-container"></div>
+</div>
+<script>
+    const taskId = 1; // Replace with dynamic task ID
+    fetch(`/api/tasks/${taskId}/`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(task => {
+        const container = document.getElementById('task-detail-container');
+        container.innerHTML = `
+            <p><strong>Title:</strong> ${task.title}</p>
+            <p><strong>Description:</strong> ${task.description}</p>
+            <p><strong>Status:</strong> ${task.status}</p>
+            <p><strong>Progress:</strong> ${task.progress}%</p>
+        `;
+    });
+</script>
+
+<!-- Task Status Update Page -->
+<div class="status-update">
+    <h2>Update Task Status</h2>
+    <form id="status-update-form">
+        <select name="status">
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+        </select>
+        <input type="number" name="progress" placeholder="Progress %">
+        <input type="text" name="notes" placeholder="Notes">
+        <button type="submit">Update</button>
+    </form>
+</div>
+<script>
+    document.getElementById('status-update-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this).entries());
+        fetch(`/api/tasks/${taskId}/update-status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(console.log);
+    });
+</script>
+
+<!-- Task Assignment List/Create -->
+<div class="assignment-section">
+    <h2>Task Assignments</h2>
+    <ul id="assignment-list"></ul>
+</div>
+<script>
+    fetch('/api/task-assignments/', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(assignments => {
+        const list = document.getElementById('assignment-list');
+        assignments.forEach(a => {
+            list.innerHTML += `<li>Task: ${a.task.title} | Employee: ${a.employee.username}</li>`;
+        });
+    });
+</script>
+
+<!-- Task Comments Section -->
+<div class="task-comments">
+    <h2>Comments</h2>
+    <ul id="comment-list"></ul>
+    <form id="comment-form">
+        <input type="text" name="comment" placeholder="Add comment">
+        <button type="submit">Add</button>
+    </form>
+</div>
+<script>
+    function loadComments() {
+        fetch(`/api/tasks/${taskId}/comments/`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(res => res.json())
+        .then(comments => {
+            const list = document.getElementById('comment-list');
+            list.innerHTML = '';
+            comments.forEach(c => {
+                list.innerHTML += `<li><strong>${c.user.username}:</strong> ${c.comment}</li>`;
+            });
+        });
+    }
+    document.getElementById('comment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const data = { comment: this.comment.value };
+        fetch(`/api/tasks/${taskId}/comments/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(data)
+        }).then(() => {
+            this.reset();
+            loadComments();
+        });
+    });
+    loadComments();
+</script>
+
+<!-- Task Progress Section -->
+<div class="task-progress">
+    <h2>Progress Updates</h2>
+    <ul id="progress-list"></ul>
+    <form id="progress-form">
+        <input type="number" name="progress_percentage" placeholder="Progress %">
+        <input type="text" name="notes" placeholder="Notes">
+        <button type="submit">Add Progress</button>
+    </form>
+</div>
+<script>
+    function loadProgress() {
+        fetch(`/api/tasks/${taskId}/progress/`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(res => res.json())
+        .then(progressUpdates => {
+            const list = document.getElementById('progress-list');
+            list.innerHTML = '';
+            progressUpdates.forEach(p => {
+                list.innerHTML += `<li>${p.updated_by.username} - ${p.progress_percentage}%: ${p.notes}</li>`;
+            });
+        });
+    }
+    document.getElementById('progress-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this).entries());
+        fetch(`/api/tasks/${taskId}/progress/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(data)
+        }).then(() => {
+            this.reset();
+            loadProgress();
+        });
+    });
+    loadProgress();
+</script>

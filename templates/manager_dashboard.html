@@ -1,219 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Dashboard</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-        body {
-            background-color: #422b2b;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            padding-top: 60px;
-        }
-        header {
-            width: 100%;
-            padding: 1rem;
-            background-color: #1e1e1e;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            top: 0;
-            left: 0;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-        }
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #007BFF;
-        }
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
-            font-size: 1rem;
-            transition: color 0.3s ease-in-out;
-        }
-        .nav-links a:hover {
-            color: #007BFF;
-        }
-        .container {
-            width: 80%;
-            margin-top: 40px;
-            text-align: center;
-            animation: fadeIn 1s ease-in-out;
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #1e1e1e;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
-        }
-        th, td {
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background-color: #007BFF;
-            color: white;
-        }
-        tr:hover {
-            background-color: #292929;
-        }
-        .status {
-            font-weight: bold;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        .status.pending {
-            background-color: orange;
-            color: black;
-        }
-        .status.in_progress {
-            background-color: yellow;
-            color: black;
-        }
-        .status.completed {
-            background-color: green;
-            color: white;
-        }
-        .update-btn {
-            padding: 5px 10px;
-            background: #007BFF;
-            border: none;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 0.9rem;
-        }
-        .update-btn:hover {
-            background: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Manager Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 20px;
+      margin: 0;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .employee-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .employee-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      transition: transform 0.2s;
+    }
+    .employee-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .employee-header {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    .employee-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 0 0 5px 0;
+    }
+    .employee-email {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    .task-count {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      border-radius: 20px;
+      padding: 5px 15px;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    .task-list {
+      margin-top: 15px;
+    }
+    .task-list h4 {
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    .task-item {
+      background-color: #f9f9f9;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      border-left: 3px solid #3498db;
+    }
+    .no-tasks {
+      color: #95a5a6;
+      font-style: italic;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.2rem;
+      color: #7f8c8d;
+    }
+    @media (max-width: 768px) {
+      .employee-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="logo">Manager Dashboard</div>
-        <nav class="nav-links">
-            <a href="#">Home</a>
-            <a href="#">Logout</a>
-        </nav>
-    </header>
-
-    <div class="container">
-        <h1>Assigned Tasks</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Task</th>
-                    <th>Employee</th>
-                    <th>Assigned Date</th>
-                    <th>Submission Date</th>
-                    <th>Status</th>
-                    <th>Update Status</th>
-                </tr>
-            </thead>
-            <tbody id="taskTableBody">
-                <!-- Tasks will be loaded dynamically -->
-            </tbody>
-        </table>
+  <div class="container">
+    <div class="header">
+      <h1>Manager Dashboard</h1>
+      <p>View all employees and their assigned tasks</p>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            fetchTasks();
+    <div id="loading" class="loading">Loading dashboard data...</div>
+
+    <div id="employeesContainer" class="employee-grid" style="display: none;">
+      <!-- Employee cards will be inserted here -->
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      fetchDashboard();
+    });
+
+    async function fetchDashboard() {
+      const accessToken = localStorage.getItem("access_token");
+      try {
+        const response = await fetch("/api/users/manager/dashboard/", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
         });
 
-        async function fetchTasks() {
-            const accessToken = localStorage.getItem("access");
-            try {
-                const response = await fetch("http://127.0.0.1:8000/api/manager/tasks/", {
-                    headers: {
-                        "Authorization": `Bearer ${accessToken}`,
-                        "Content-Type": "application/json"
-                    }
-                });
+        const data = await response.json();
+        if (response.ok) {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("employeesContainer").style.display = "grid";
+          renderDashboard(data);
+        } else {
+          document.getElementById("loading").innerHTML = "Failed to load dashboard data.";
+          console.error(data);
+        }
+      } catch (err) {
+        document.getElementById("loading").innerHTML = "Error loading dashboard.";
+        console.error(err);
+      }
+    }
 
-                const tasks = await response.json();
-                if (response.ok) {
-                    displayTasks(tasks);
-                } else {
-                    console.error("Error fetching tasks:", tasks);
-                }
-            } catch (error) {
-                console.error("Error:", error);
-            }
+    function renderDashboard(data) {
+      const employeesContainer = document.getElementById("employeesContainer");
+      employeesContainer.innerHTML = "";
+
+      if (!data.employees || data.employees.length === 0) {
+        employeesContainer.innerHTML = "<p class='no-tasks'>No employees found.</p>";
+        return;
+      }
+
+      data.employees.forEach(employee => {
+        const empCard = document.createElement("div");
+        empCard.className = "employee-card";
+
+        // Create task list HTML
+        let taskListHTML = "";
+        if (employee.assigned_tasks && employee.assigned_tasks.length > 0) {
+          taskListHTML = employee.assigned_tasks.map(taskTitle =>
+            `<div class="task-item">${taskTitle}</div>`
+          ).join("");
+        } else {
+          taskListHTML = "<p class='no-tasks'>No tasks assigned.</p>";
         }
 
-        function displayTasks(tasks) {
-            const taskTableBody = document.getElementById("taskTableBody");
-            taskTableBody.innerHTML = "";
+        empCard.innerHTML = `
+          <div class="employee-header">
+            <h3 class="employee-name">${employee.first_name} ${employee.last_name}</h3>
+            <p class="employee-email">${employee.email}</p>
+          </div>
 
-            tasks.forEach(task => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${task.title}</td>
-                    <td>${task.employee_name}</td>
-                    <td>${task.assigned_date}</td>
-                    <td>${task.submission_date}</td>
-                    <td>
-                        <span class="status ${task.status}">
-                            ${task.status.replace("_", " ")}
-                        </span>
-                    </td>
-                    <td>
-                        <select class="update-status" data-task-id="${task.id}">
-                            <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
-                            <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
-                            <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
-                        </select>
-                        <button class="update-btn" onclick="updateTaskStatus(${task.id})">Update</button>
-                    </td>
-                `;
-                taskTableBody.appendChild(row);
-            });
-        }
+          <div class="task-count">Tasks: ${employee.task_count}</div>
 
-        async function updateTaskStatus(taskId) {
-            const accessToken = localStorage.getItem("access");
-            const newStatus = document.querySelector(`select[data-task-id="${taskId}"]`).value;
+          <div class="task-list">
+            <h4>Assigned Tasks:</h4>
+            ${taskListHTML}
+          </div>
+        `;
 
-            try {
-                const response = await fetch(`http://127.0.0.1:8000/api/manager/tasks/update/${taskId}/`, {
-                    method: "PATCH",
-                    headers: {
-                        "Authorization": `Bearer ${accessToken}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ status: newStatus })
-                });
-
-                if (response.ok) {
-                    alert("Task status updated!");
-                    fetchTasks();
-                } else {
-                    alert("Error updating task");
-                }
-            } catch (error) {
-                console.error("Error:", error);
-            }
-        }
-    </script>
+        employeesContainer.appendChild(empCard);
+      });
+    }
+  </script>
 </body>
 </html>

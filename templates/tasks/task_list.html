@@ -1,95 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Management</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { text-align: center; }
-        .container { max-width: 800px; margin: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #007BFF; color: white; }
-        .status { padding: 5px 10px; border-radius: 5px; }
-        .status.pending { background-color: orange; color: black; }
-        .status.in_progress { background-color: yellow; color: black; }
-        .status.completed { background-color: green; color: white; }
-        button { padding: 5px 10px; margin-top: 10px; cursor: pointer; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>All Tasks</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      padding: 40px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #4caf50;
+    }
+
+    .logout-btn {
+      float: right;
+      padding: 10px 20px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .logout-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      background-color: #2e2e2e;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 20px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #3a3a3a;
+    }
+
+    a {
+      color: #03a9f4;
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-    <h1>Task Management</h1>
-    <div class="container">
-        <h2>Your Tasks</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Task</th>
-                    <th>Assigned By</th>
-                    <th>Status</th>
-                    <th>Update Status</th>
-                </tr>
-            </thead>
-            <tbody id="taskTable"></tbody>
-        </table>
-        <h2>Create New Task (Manager Only)</h2>
-        <form id="taskForm">
-            <input type="text" id="title" placeholder="Task Title" required>
-            <input type="text" id="assignedTo" placeholder="Assign to (Email)" required>
-            <button type="submit">Create Task</button>
-        </form>
-    </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", fetchTasks);
-        document.getElementById("taskForm").addEventListener("submit", createTask);
-        async function fetchTasks() {
-            const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
-                headers: { "Authorization": `Bearer ${localStorage.getItem("access")}` }
-            });
-            const tasks = await response.json();
-            document.getElementById("taskTable").innerHTML = tasks.map(task => `
-                <tr>
-                    <td>${task.title}</td>
-                    <td>${task.assigned_by}</td>
-                    <td class="status ${task.status}">${task.status.replace("_", " ")}</td>
-                    <td>
-                        <select class="statusSelect" data-id="${task.id}">
-                            <option value="pending" ${task.status === "pending" ? "selected" : ""}>Pending</option>
-                            <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>In Progress</option>
-                            <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
-                        </select>
-                        <button onclick="updateStatus(${task.id})">Update</button>
-                    </td>
-                </tr>
-            `).join("");
+
+  <button class="logout-btn" onclick="logout()">Logout</button>
+  <h2>All Assigned Tasks</h2>
+
+  <table id="taskTable">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Description</th>
+        <th>Assigned To</th>
+        <th>Status</th>
+        <th>Document</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Tasks will be loaded here -->
+    </tbody>
+  </table>
+
+  <script>
+    const token = localStorage.getItem("access_token");
+
+    async function fetchTasks() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (response.status === 401) {
+          alert("Session expired. Please login again.");
+          logout();
+          return;
         }
-        async function updateStatus(taskId) {
-            const newStatus = document.querySelector(`select[data-id='${taskId}']`).value;
-            await fetch(`http://127.0.0.1:8000/api/tasks/update/${taskId}/`, {
-                method: "PATCH",
-                headers: {
-                    "Authorization": `Bearer ${localStorage.getItem("access")}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-            fetchTasks();
-        }
-        async function createTask(event) {
-            event.preventDefault();
-            const title = document.getElementById("title").value;
-            const assignedTo = document.getElementById("assignedTo").value;
-            await fetch("http://127.0.0.1:8000/api/tasks/create/", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${localStorage.getItem("access")}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ title, assigned_to: assignedTo })
-            });
-            fetchTasks();
-        }
-    </script>
+
+        const tasks = await response.json();
+        const tbody = document.querySelector("#taskTable tbody");
+        tbody.innerHTML = "";
+
+        tasks.forEach(task => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${task.title}</td>
+            <td>${task.description}</td>
+            <td>${task.assigned_to.username}</td>
+            <td>${task.status.replace('_', ' ')}</td>
+            <td>${task.document ? `<a href="${task.document}" target="_blank">View</a>` : 'N/A'}</td>
+            <td>${new Date(task.created_at).toLocaleString()}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        alert("Failed to load tasks.");
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/manager_login.html";
+    }
+
+    // Load tasks on page load
+    fetchTasks();
+  </script>
 </body>
 </html>

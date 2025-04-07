@@ -1,8 +1,14 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
-from .models import Task
-from .serializers import TaskSerializer
+from django.utils import timezone
+from django.db.models import Q
+from .models import Task, TaskAssignment, TaskComment, TaskProgress
+from .serializers import (
+    TaskSerializer, TaskDetailSerializer, TaskAssignmentSerializer,
+    TaskCommentSerializer, TaskProgressSerializer, TaskAssignmentCreateSerializer
+)
 from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
@@ -19,21 +25,36 @@ class TaskCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user  # The logged-in manager
-        
+
         # Get assigned_to user from request data
         assigned_to = serializer.validated_data.get("assigned_to")
-        
+
         # Ensure assigned_to is an employee
-        if not assigned_to or assigned_to.role != "employee":
+        if not assigned_to or assigned_to.role != "Employee":
             raise ValidationError({"assigned_to": "Tasks can only be assigned to employees."})
 
         with transaction.atomic():  # Ensures atomicity
             task = serializer.save(assigned_by=user)  # Assign task with manager info
 
+            # Create a TaskAssignment record
+            due_date = serializer.validated_data.get('due_date')
+            estimated_hours = None
+            if due_date:
+                # Estimate hours based on due date (8 hours per workday)
+                days_until_due = (due_date - timezone.now()).days
+                if days_until_due > 0:
+                    estimated_hours = days_until_due * 8
+
+            TaskAssignment.objects.create(
+                task=task,
+                employee=assigned_to,
+                estimated_hours=estimated_hours
+            )
+
             # Send email notification
             if assigned_to.email:
                 send_email_notification(
-                    recipient_email=assigned_to.email,
+                    to_email=assigned_to.email,
                     subject="New Task Assigned",
                     message=f"Dear {assigned_to.username},\n\n"
                             f"You have been assigned a new task: {task.title}.\n"
@@ -42,7 +63,7 @@ class TaskCreateView(generics.CreateAPIView):
                 )
 
 def task_create(request):
-    return render(request,'tasks/task_create.html') 
+    return render(request,'tasks/task_create.html')
 
 class TaskListView(generics.ListAPIView):
     """
@@ -51,17 +72,64 @@ class TaskListView(generics.ListAPIView):
     """
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'due_date', 'priority', 'status']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'manager':
-            return Task.objects.all()  # Managers see all tasks
-        return Task.objects.filter(assigned_to=user)
-    
+        queryset = None
+
+        if user.role == 'Manager':
+            queryset = Task.objects.all()  # Managers see all tasks
+        else:
+            queryset = Task.objects.filter(assigned_to=user)
+
+        # Filter by status if provided
+        status_param = self.request.query_params.get('status', None)
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        # Filter by priority if provided
+        priority_param = self.request.query_params.get('priority', None)
+        if priority_param:
+            queryset = queryset.filter(priority=priority_param)
+
+        # Filter by due date range
+        due_date_from = self.request.query_params.get('due_date_from', None)
+        due_date_to = self.request.query_params.get('due_date_to', None)
+
+        if due_date_from:
+            queryset = queryset.filter(due_date__gte=due_date_from)
+        if due_date_to:
+            queryset = queryset.filter(due_date__lte=due_date_to)
+
+        # Filter overdue tasks
+        overdue = self.request.query_params.get('overdue', None)
+        if overdue and overdue.lower() == 'true':
+            queryset = queryset.filter(due_date__lt=timezone.now(), status__in=['pending', 'in_progress'])
+
+        return queryset
+
 
 def task_list(request):
     return render(request,'tasks/task_list.html')
 
+
+class TaskDetailView(generics.RetrieveAPIView):
+    """
+    Retrieve detailed information about a task.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'Manager':
+            return Task.objects.all()
+        return Task.objects.filter(assigned_to=user)
 
 class TaskUpdateStatusView(generics.UpdateAPIView):
     """
@@ -82,9 +150,69 @@ class TaskUpdateStatusView(generics.UpdateAPIView):
             if new_status not in ['pending', 'in_progress', 'completed']:
                 return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
 
-            task.status = new_status
-            task.save()
-            send_email_notification(task.assigned_by.email, "Task Status Updated", f"Task '{task.title}' is now {task.status}")
+            # Get progress percentage if provided
+            progress_percentage = request.data.get('progress', None)
+
+            with transaction.atomic():
+                # Update task status
+                task.status = new_status
+
+                # Update progress if provided
+                if progress_percentage is not None:
+                    try:
+                        progress_percentage = int(progress_percentage)
+                        if 0 <= progress_percentage <= 100:
+                            task.progress = progress_percentage
+
+                            # Create progress update record
+                            TaskProgress.objects.create(
+                                task=task,
+                                updated_by=request.user,
+                                progress_percentage=progress_percentage,
+                                notes=request.data.get('notes', '')
+                            )
+                        else:
+                            return Response({'error': 'Progress must be between 0 and 100'},
+                                            status=status.HTTP_400_BAD_REQUEST)
+                    except ValueError:
+                        return Response({'error': 'Progress must be a number'},
+                                        status=status.HTTP_400_BAD_REQUEST)
+
+                # If status is completed, set progress to 100%
+                if new_status == 'completed' and task.progress < 100:
+                    task.progress = 100
+                    TaskProgress.objects.create(
+                        task=task,
+                        updated_by=request.user,
+                        progress_percentage=100,
+                        notes="Task marked as completed"
+                    )
+
+                # If status is in_progress and progress is 0, set to 10%
+                if new_status == 'in_progress' and task.progress == 0:
+                    task.progress = 10
+                    TaskProgress.objects.create(
+                        task=task,
+                        updated_by=request.user,
+                        progress_percentage=10,
+                        notes="Task started"
+                    )
+
+                task.save()
+
+                # Update task assignment if status is completed
+                if new_status == 'completed':
+                    assignment = TaskAssignment.objects.filter(task=task, employee=request.user).first()
+                    if assignment and not assignment.completed_at:
+                        assignment.completed_at = timezone.now()
+                        assignment.save()
+
+            # Send email notification
+            send_email_notification(
+                to_email=task.assigned_by.email,
+                subject="Task Status Updated",
+                message=f"Task '{task.title}' is now {task.status} with {task.progress}% progress."
+            )
 
             return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
@@ -92,4 +220,74 @@ class TaskUpdateStatusView(generics.UpdateAPIView):
             return Response({'error': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
+class TaskAssignmentListView(generics.ListCreateAPIView):
+    """
+    List all task assignments or create a new one.
+    """
+    serializer_class = TaskAssignmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return TaskAssignmentCreateSerializer
+        return TaskAssignmentSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'Manager':
+            return TaskAssignment.objects.all()
+        return TaskAssignment.objects.filter(employee=user)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class TaskCommentListCreateView(generics.ListCreateAPIView):
+    """
+    List all comments for a task or create a new comment.
+    """
+    serializer_class = TaskCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        task_id = self.kwargs.get('task_id')
+        return TaskComment.objects.filter(task_id=task_id)
+
+    def perform_create(self, serializer):
+        task_id = self.kwargs.get('task_id')
+        task = get_object_or_404(Task, pk=task_id)
+
+        # Check if user is associated with this task
+        user = self.request.user
+        if user.role != 'Manager' and task.assigned_to != user:
+            raise ValidationError("You can only comment on tasks assigned to you.")
+
+        serializer.save(task=task, user=user)
+
+class TaskProgressListCreateView(generics.ListCreateAPIView):
+    """
+    List all progress updates for a task or create a new progress update.
+    """
+    serializer_class = TaskProgressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        task_id = self.kwargs.get('task_id')
+        return TaskProgress.objects.filter(task_id=task_id)
+
+    def perform_create(self, serializer):
+        task_id = self.kwargs.get('task_id')
+        task = get_object_or_404(Task, pk=task_id)
+
+        # Check if user is associated with this task
+        user = self.request.user
+        if user.role != 'Manager' and task.assigned_to != user:
+            raise ValidationError("You can only update progress on tasks assigned to you.")
+
+        # Validate progress percentage
+        progress_percentage = serializer.validated_data.get('progress_percentage')
+        if not (0 <= progress_percentage <= 100):
+            raise ValidationError("Progress percentage must be between 0 and 100.")
+
+        serializer.save(task=task, updated_by=user)
+

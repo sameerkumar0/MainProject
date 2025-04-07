@@ -113,7 +113,7 @@
 
                 if (response.ok) {
                     alert("Login successful!");
-                    window.location.href = data.redirect_url; 
+                    window.location.href = "{% url 'employee_dashboard' %}"; 
                 } else {
                     alert(data.error || "Login failed");
                 }

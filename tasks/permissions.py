@@ -13,7 +13,7 @@ class IsEmployee(BasePermission):
     Custom permission to grant access only to Employees.
     """
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == 'employee'
+        return request.user and request.user.is_authenticated and request.user.role == 'Employee'
 
 
 class IsTaskAssignedToEmployee(BasePermission):

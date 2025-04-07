@@ -1,8 +1,12 @@
-from rest_framework import generics,status,permissions
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
+from django.contrib.auth import get_user_model, logout as auth_logout
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework_simplejwt.views import TokenBlacklistView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.contrib.auth import authenticate
+from django.db import models
 from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
 from notifications.email_services import send_email_notification
 import random
@@ -11,7 +15,7 @@ from django.contrib.auth.hashers import make_password
 from django.conf import settings
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from tasks.models import Task 
+from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager
 from rest_framework.permissions import AllowAny
@@ -40,7 +44,7 @@ class EmployeeRegisterView(generics.CreateAPIView):
                 f"Email: {user.email}\n\n"
                 "Please log in to your account to get started."
             )
-            # send_email_notification(user.email, email_subject, email_body)  # Uncomment if you have email sending set up
+            send_email_notification(user.email, email_subject, email_body)
 
         except Exception as e:
             print(f"DEBUG: Error - {str(e)}")
@@ -76,9 +80,9 @@ class ManagerRegisterView(generics.CreateAPIView):
             print(f"DEBUG: Error - {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        
+
 def register_manager(request):
-    return render(request, 'manager_register.html') 
+    return render(request, 'manager_register.html')
 
 
 
@@ -129,17 +133,49 @@ class ManagerLoginView(generics.GenericAPIView):
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "role": user.role,
-            "redirect_url": request.build_absolute_uri(reverse("list_employees"))
+            "redirect_url": request.build_absolute_uri(reverse("manager_dasboard"))
         }, status=status.HTTP_200_OK)
-    
+
 
 def manager_login_page(request):
     return render(request, "manager_login.html")
 
 
+class LogoutView(APIView):
+    """
+    Logout view that blacklists the refresh token and clears session data.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Get the refresh token from the request data
+            refresh_token = request.data.get('refresh_token')
+            if refresh_token:
+                # Blacklist the refresh token
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+
+            # Logout the user from the session
+            auth_logout(request)
+
+            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except TokenError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def logout_view(request):
+    """
+    Render the logout confirmation page.
+    """
+    return render(request, 'logout.html')
+
+
 
 class ForgotPasswordView(generics.GenericAPIView):
-    serializer_class = ForgotPasswordSerializer  
+    serializer_class = ForgotPasswordSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -180,7 +216,7 @@ def reset_password_page(request):
     return render(request, 'reset-password.html', {'email': email})
 
 class ResetPasswordView(generics.GenericAPIView):
-    serializer_class = ResetPasswordSerializer  
+    serializer_class = ResetPasswordSerializer
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -204,23 +240,63 @@ class ResetPasswordView(generics.GenericAPIView):
 
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
 
+
+
+class EmployeeDashboardView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Get tasks assigned to the current user with optimized query
+        return Task.objects.select_related('assigned_by').filter(
+            assigned_to=self.request.user
+        ).annotate(
+            assignment_date=models.F('created_at'),
+            submission_date=models.F('due_date')
+        ).order_by('due_date')
+
+    def list(self, request, *args, **kwargs):
+        # Get the queryset and serialize it
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+
+        # Calculate task statistics
+        total_tasks = queryset.count()
+        completed_tasks = queryset.filter(status='completed').count()
+        in_progress_tasks = queryset.filter(status='in_progress').count()
+        pending_tasks = queryset.filter(status='pending').count()
+
+        # Return API response if requested via API
+        if request.accepted_renderer.format == 'json':
+            return Response({
+                'tasks': serializer.data,
+                'task_stats': {
+                    'total': total_tasks,
+                    'completed': completed_tasks,
+                    'in_progress': in_progress_tasks,
+                    'pending': pending_tasks
+                }
+            })
+
+        # Otherwise render the template
+        context = {
+            'employee': request.user,
+            'tasks': queryset,
+            'task_stats': {
+                'total': total_tasks,
+                'completed': completed_tasks,
+                'in_progress': in_progress_tasks,
+                'pending': pending_tasks
+            }
+        }
+        return render(request, 'employee_dashboard.html', context)
 
 @login_required
 def employee_dashboard(request):
-    user = request.user  
-    # Fetch assigned tasks for the employee
-    tasks = Task.objects.filter(assigned_to=user)
+    return render(request,'employee_dashboard.html')
 
-    context = {
-        "employee": user,
-        "tasks": tasks,
-    }
-    return render(request, "employee_dashboard.html", context)
-
-
-# manager Dashboard 
+# manager Dashboard
 
 class ManagerDashboardView(generics.GenericAPIView):
     """
@@ -230,21 +306,32 @@ class ManagerDashboardView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         manager = request.user
-        employees = User.objects.filter(role="employee")  # Get all employees under manager
-        tasks = Task.objects.filter(assigned_by=manager)  # Get all tasks assigned by manager
+        employees = User.objects.filter(role="Employee")  # Get all employees under manager
 
-        employee_data = EmployeeSerializer(employees, many=True).data
-        task_data = TaskSerializer(tasks, many=True).data
+        # Create a list to store employees with their assigned tasks
+        employees_with_tasks = []
+
+        for employee in employees:
+            # Get tasks assigned to this employee by the current manager
+            employee_tasks = Task.objects.filter(assigned_to=employee, assigned_by=manager)
+
+            # Serialize the employee
+            employee_data = EmployeeSerializer(employee).data
+
+            # Only get task titles instead of full task data
+            task_titles = [task.title for task in employee_tasks]
+
+            # Add tasks to employee data
+            employee_data['assigned_tasks'] = task_titles
+            employee_data['task_count'] = employee_tasks.count()
+
+            # Add to the list
+            employees_with_tasks.append(employee_data)
 
         return Response({
-            "manager": {
-                "username": manager.username,
-                "email": manager.email,
-            },
-            "employees": employee_data,
-            "tasks": task_data,
+            "employees": employees_with_tasks  # Only includes employees with their tasks and task count
         })
-    
+
 def dashboard_Page(request):
     return render(request,'manager_dashboard.html')
 
@@ -264,11 +351,11 @@ class EmployeeListView(generics.ListAPIView):
     Only Managers can access this list.
     """
     serializer_class = EmployeeSerializer
-    permission_classes = [permissions.IsAuthenticated, IsManager] 
+    permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def get_queryset(self):
         return CustomUser.objects.filter(role="Employee")
-    
+
 
 def list_employee(request):
     return render(request,'employee_list.html')

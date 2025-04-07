@@ -1,125 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Assignment</title>
-    <style>
-        * { font-family: Arial, sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #f4f4f4; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        h1 { margin-bottom: 20px; color: #007BFF; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); width: 400px; }
-        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ddd; }
-        button { background: #007BFF; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .message { margin-top: 10px; font-weight: bold; }
-        .error { color: red; }
-        .success { color: green; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Task</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+      color: #007BFF;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="date"],
+    textarea,
+    select,
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .message {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .message.error { color: red; }
+    .message.success { color: green; }
+  </style>
 </head>
 <body>
 
-    <h1>Task Assignment</h1>
-    <div class="container">
-        <label for="title">Task Title:</label>
-        <input type="text" id="title" placeholder="Enter Task Title" required>
+  <h1>Create New Task</h1>
+  <div class="container">
+    <form id="taskForm">
+      <label for="title">Task Title</label>
+      <input type="text" id="title" name="title" required>
 
-        <label for="description">Description:</label>
-        <textarea id="description" placeholder="Enter Task Description" required></textarea>
+      <label for="description">Description</label>
+      <textarea id="description" name="description" required></textarea>
 
-        <label for="assigned_to">Assign To:</label>
-        <select id="assigned_to" required>
-            <option value="">Loading Employees...</option>
-        </select>
+      <label for="assigned_to">Assign To (Employee)</label>
+      <select id="assigned_to" name="assigned_to" required>
+        <option value="">Loading employees...</option>
+      </select>
 
-        <label for="due_date">Due Date:</label>
-        <input type="date" id="due_date" required>
+      <label for="due_date">Due Date</label>
+      <input type="date" id="due_date" name="due_date" required>
 
-        <label for="document">Attach Document:</label>
-        <input type="file" id="document">
+      <label for="document">Attach Document (optional)</label>
+      <input type="file" id="document" name="document" accept=".pdf,.doc,.docx">
 
-        <button onclick="createTask()">Assign Task</button>
+      <button type="submit">Assign Task</button>
+    </form>
+    <p id="message" class="message"></p>
+  </div>
 
-        <p id="message" class="message"></p>
-    </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchEmployees();
+      document.getElementById("taskForm").addEventListener("submit", createTask);
+    });
 
-    <script>
-        document.addEventListener("DOMContentLoaded", fetchEmployees);
+    async function fetchEmployees() {
+      const token = localStorage.getItem("access_token");
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/users/list_employee/", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Failed to load employees");
+        const employees = await res.json();
+        const sel = document.getElementById("assigned_to");
+        sel.innerHTML = employees.map(emp =>
+          `<option value="${emp.id}">${emp.first_name} ${emp.last_name} (${emp.username})</option>`
+        ).join("");
+      } catch (err) {
+        console.error(err);
+        document.getElementById("message").textContent = err.message;
+        document.getElementById("message").className = "message error";
+      }
+    }
 
-        async function fetchEmployees() {
-            const token = localStorage.getItem("access");
-            const employeeSelect = document.getElementById("assigned_to");
+    async function createTask(e) {
+      e.preventDefault();
+      const token = localStorage.getItem("access_token");
+      const msg = document.getElementById("message");
+      msg.textContent = ""; msg.className = "message";
 
-            try {
-                const response = await fetch("http://127.0.0.1:8000/api/employees/", {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
+      const form = document.getElementById("taskForm");
+      const formData = new FormData(form);
 
-                if (!response.ok) throw new Error("Failed to fetch employees");
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/tasks/create/", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData
+        });
 
-                const employees = await response.json();
-                employeeSelect.innerHTML = employees.map(emp =>
-                    `<option value="${emp.id}">${emp.username} (${emp.email})</option>`
-                ).join("");
-            } catch (error) {
-                employeeSelect.innerHTML = '<option value="">Error loading employees</option>';
-                console.error("Error fetching employees:", error);
-            }
-        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.assigned_to || data.detail || "Failed to create task");
 
-        async function createTask() {
-            const token = localStorage.getItem("access");
-            const title = document.getElementById("title").value;
-            const description = document.getElementById("description").value;
-            const assignedTo = document.getElementById("assigned_to").value;
-            const dueDate = document.getElementById("due_date").value;
-            const documentFile = document.getElementById("document").files[0];
-            const messageBox = document.getElementById("message");
-
-            messageBox.textContent = "";
-            messageBox.className = "";
-
-            if (!title || !description || !assignedTo || !dueDate) {
-                messageBox.textContent = "All fields are required.";
-                messageBox.className = "message error";
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("title", title);
-            formData.append("description", description);
-            formData.append("assigned_to", assignedTo);
-            formData.append("submission_date", dueDate);
-            if (documentFile) {
-                formData.append("document", documentFile);
-            }
-
-            try {
-                const response = await fetch("http://127.0.0.1:8000/api/tasks/create/", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${token}` },
-                    body: formData // Using FormData to send files
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    messageBox.textContent = "Task assigned successfully!";
-                    messageBox.className = "message success";
-                    document.getElementById("title").value = "";
-                    document.getElementById("description").value = "";
-                    document.getElementById("due_date").value = "";
-                    document.getElementById("document").value = "";
-                } else {
-                    messageBox.textContent = result.detail || "Error assigning task.";
-                    messageBox.className = "message error";
-                }
-            } catch (error) {
-                messageBox.textContent = "Failed to assign task.";
-                messageBox.className = "message error";
-                console.error("Error:", error);
-            }
-        }
-    </script>
+        msg.textContent = "Task assigned successfully!";
+        msg.className = "message success";
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        msg.textContent = err.message;
+        msg.className = "message error";
+      }
+    }
+  </script>
 
 </body>
 </html>
