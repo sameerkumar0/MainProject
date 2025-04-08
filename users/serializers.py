@@ -2,6 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from .models import CustomUser, UserRoles
 
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import CustomUser
 class EmployeeSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
 
@@ -35,9 +38,6 @@ class ManagerRegisterSerializer(serializers.ModelSerializer):
 
 
 
-from rest_framework import serializers
-from django.contrib.auth import authenticate
-from .models import CustomUser
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -76,3 +76,4 @@ class ResetPasswordSerializer(serializers.Serializer):
         if data['password'] != data['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         return data
+

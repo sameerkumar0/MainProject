@@ -2,112 +2,127 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Manager Dashboard</title>
+  <title>Employee Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
       background-color: #f5f5f5;
       color: #333;
-      padding: 20px;
       margin: 0;
+      padding: 0;
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .header {
+
+    .navbar {
       background-color: #2c3e50;
       color: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
     }
-    .employee-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
+
+    .navbar .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
-    .employee-card {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      padding: 20px;
-      transition: transform 0.2s;
+
+    .navbar .user-info img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid white;
     }
-    .employee-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
     }
-    .employee-header {
-      border-bottom: 1px solid #eee;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-    }
-    .employee-name {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #2c3e50;
-      margin: 0 0 5px 0;
-    }
-    .employee-email {
-      color: #7f8c8d;
-      font-size: 0.9rem;
-      margin: 0;
-    }
-    .task-count {
-      display: inline-block;
+
+    .header {
       background-color: #3498db;
       color: white;
-      border-radius: 20px;
-      padding: 5px 15px;
-      font-size: 0.9rem;
-      margin-top: 10px;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
     }
+
+    .task-stats {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .stat {
+      background-color: white;
+      border-left: 5px solid #3498db;
+      border-radius: 6px;
+      padding: 15px 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      flex: 1;
+      min-width: 200px;
+      text-align: center;
+    }
+
     .task-list {
-      margin-top: 15px;
+      display: grid;
+      gap: 15px;
     }
-    .task-list h4 {
-      margin-bottom: 10px;
+
+    .task-card {
+      background-color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .task-title {
+      font-size: 1.1rem;
+      font-weight: bold;
       color: #2c3e50;
+      margin-bottom: 10px;
     }
-    .task-item {
-      background-color: #f9f9f9;
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin-bottom: 8px;
-      border-left: 3px solid #3498db;
+
+    .task-info {
+      font-size: 0.9rem;
+      color: #7f8c8d;
     }
-    .no-tasks {
-      color: #95a5a6;
-      font-style: italic;
-    }
+
     .loading {
       text-align: center;
       padding: 40px;
       font-size: 1.2rem;
       color: #7f8c8d;
     }
-    @media (max-width: 768px) {
-      .employee-grid {
-        grid-template-columns: 1fr;
-      }
-    }
   </style>
 </head>
 <body>
+
+  <div class="navbar">
+    <h2>Employee Dashboard</h2>
+    <div class="user-info">
+      <span id="employeeName">Loading...</span>
+      <img id="employeePhoto" src="" alt="Profile Photo">
+    </div>
+  </div>
+
   <div class="container">
     <div class="header">
-      <h1>Manager Dashboard</h1>
-      <p>View all employees and their assigned tasks</p>
+      <h3>My Assigned Tasks</h3>
+      <p>Track progress of all your tasks here</p>
     </div>
 
-    <div id="loading" class="loading">Loading dashboard data...</div>
+    <div id="statsContainer" class="task-stats"></div>
 
-    <div id="employeesContainer" class="employee-grid" style="display: none;">
-      <!-- Employee cards will be inserted here -->
-    </div>
+    <div id="loading" class="loading">Loading tasks...</div>
+
+    <div id="taskList" class="task-list" style="display: none;"></div>
   </div>
 
   <script>
@@ -116,69 +131,74 @@
     });
 
     async function fetchDashboard() {
-      const accessToken = localStorage.getItem("access_token");
+      const token = localStorage.getItem("access_token");
+
       try {
-        const response = await fetch("/api/users/manager/dashboard/", {
+        const response = await fetch("/api/users/employee_dashboard/", {
           headers: {
-            Authorization: `Bearer ${accessToken}`
+            Authorization: `Bearer ${token}`
           }
         });
 
         const data = await response.json();
-        if (response.ok) {
-          document.getElementById("loading").style.display = "none";
-          document.getElementById("employeesContainer").style.display = "grid";
-          renderDashboard(data);
-        } else {
-          document.getElementById("loading").innerHTML = "Failed to load dashboard data.";
-          console.error(data);
+
+        if (!response.ok) {
+          document.getElementById("loading").textContent = "Failed to load tasks.";
+          return;
         }
-      } catch (err) {
-        document.getElementById("loading").innerHTML = "Error loading dashboard.";
-        console.error(err);
+
+        renderStats(data.task_stats);
+        renderTasks(data.tasks);
+        renderUser(); // optional call if user info is saved separately
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("taskList").style.display = "grid";
+
+      } catch (error) {
+        document.getElementById("loading").textContent = "Error loading dashboard.";
+        console.error(error);
       }
     }
 
-    function renderDashboard(data) {
-      const employeesContainer = document.getElementById("employeesContainer");
-      employeesContainer.innerHTML = "";
+    function renderStats(stats) {
+      const container = document.getElementById("statsContainer");
+      container.innerHTML = `
+        <div class="stat"><strong>Total Tasks:</strong> ${stats.total}</div>
+        <div class="stat"><strong>Completed:</strong> ${stats.completed}</div>
+        <div class="stat"><strong>In Progress:</strong> ${stats.in_progress}</div>
+        <div class="stat"><strong>Pending:</strong> ${stats.pending}</div>
+      `;
+    }
 
-      if (!data.employees || data.employees.length === 0) {
-        employeesContainer.innerHTML = "<p class='no-tasks'>No employees found.</p>";
+    function renderTasks(tasks) {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+
+      if (!tasks.length) {
+        list.innerHTML = "<p class='loading'>No tasks assigned yet.</p>";
         return;
       }
 
-      data.employees.forEach(employee => {
-        const empCard = document.createElement("div");
-        empCard.className = "employee-card";
-
-        // Create task list HTML
-        let taskListHTML = "";
-        if (employee.assigned_tasks && employee.assigned_tasks.length > 0) {
-          taskListHTML = employee.assigned_tasks.map(taskTitle =>
-            `<div class="task-item">${taskTitle}</div>`
-          ).join("");
-        } else {
-          taskListHTML = "<p class='no-tasks'>No tasks assigned.</p>";
-        }
-
-        empCard.innerHTML = `
-          <div class="employee-header">
-            <h3 class="employee-name">${employee.first_name} ${employee.last_name}</h3>
-            <p class="employee-email">${employee.email}</p>
-          </div>
-
-          <div class="task-count">Tasks: ${employee.task_count}</div>
-
-          <div class="task-list">
-            <h4>Assigned Tasks:</h4>
-            ${taskListHTML}
-          </div>
+      tasks.forEach(task => {
+        const card = document.createElement("div");
+        card.className = "task-card";
+        card.innerHTML = `
+          <div class="task-title">${task.title}</div>
+          <div class="task-info">Due: ${task.due_date} | Status: ${task.status}</div>
         `;
-
-        employeesContainer.appendChild(empCard);
+        list.appendChild(card);
       });
     }
+
+    function renderUser() {
+      // You can replace this with actual user info stored in localStorage or fetch from `/api/user/me/`
+      const name = localStorage.getItem("user_name") || "Employee Name";
+      const photo = localStorage.getItem("profile_photo") || "/static/default-avatar.png";
+
+      document.getElementById("employeeName").textContent = name;
+      document.getElementById("employeePhoto").src = photo;
+    }
   </script>
+
 </body>
 </html>

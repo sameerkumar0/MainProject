@@ -7,37 +7,43 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background-color: #121212;
+      color: #f1f1f1;
       padding: 40px;
     }
     h1 {
       text-align: center;
-      color: #007BFF;
+      color: #00bfff;
     }
     .container {
       max-width: 500px;
       margin: auto;
-      background: white;
+      background: #1e1e1e;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
     }
     label {
       display: block;
       margin-top: 15px;
       font-weight: bold;
+      color: #e0e0e0;
     }
     input[type="text"],
     input[type="date"],
     textarea,
-    select,
     input[type="file"] {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
-      border: 1px solid #ccc;
+      background: #2a2a2a;
+      color: #ffffff;
+      border: 1px solid #444;
       border-radius: 5px;
       box-sizing: border-box;
+    }
+    input[type="file"] {
+      padding: 8px;
     }
     textarea {
       resize: vertical;
@@ -47,23 +53,24 @@
       margin-top: 20px;
       width: 100%;
       padding: 12px;
-      background: #007BFF;
-      color: white;
+      background: #00bfff;
+      color: #fff;
       border: none;
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
+      transition: background 0.3s ease;
     }
     button:hover {
-      background: #0056b3;
+      background: #009acd;
     }
     .message {
       margin-top: 15px;
       text-align: center;
       font-weight: bold;
     }
-    .message.error { color: red; }
-    .message.success { color: green; }
+    .message.error { color: #ff6b6b; }
+    .message.success { color: #32cd32; }
   </style>
 </head>
 <body>
@@ -77,46 +84,21 @@
       <label for="description">Description</label>
       <textarea id="description" name="description" required></textarea>
 
-      <label for="assigned_to">Assign To (Employee)</label>
-      <select id="assigned_to" name="assigned_to" required>
-        <option value="">Loading employees...</option>
-      </select>
-
       <label for="due_date">Due Date</label>
       <input type="date" id="due_date" name="due_date" required>
 
-      <label for="document">Attach Document (optional)</label>
+      <label for="document">Attach Document</label>
       <input type="file" id="document" name="document" accept=".pdf,.doc,.docx">
 
-      <button type="submit">Assign Task</button>
+      <button type="submit">Create Task</button>
     </form>
     <p id="message" class="message"></p>
   </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      fetchEmployees();
       document.getElementById("taskForm").addEventListener("submit", createTask);
     });
-
-    async function fetchEmployees() {
-      const token = localStorage.getItem("access_token");
-      try {
-        const res = await fetch("http://127.0.0.1:8000/api/users/list_employee/", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error("Failed to load employees");
-        const employees = await res.json();
-        const sel = document.getElementById("assigned_to");
-        sel.innerHTML = employees.map(emp =>
-          `<option value="${emp.id}">${emp.first_name} ${emp.last_name} (${emp.username})</option>`
-        ).join("");
-      } catch (err) {
-        console.error(err);
-        document.getElementById("message").textContent = err.message;
-        document.getElementById("message").className = "message error";
-      }
-    }
 
     async function createTask(e) {
       e.preventDefault();
@@ -135,9 +117,9 @@
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.assigned_to || data.detail || "Failed to create task");
+        if (!res.ok) throw new Error(data.detail || "Failed to create task");
 
-        msg.textContent = "Task assigned successfully!";
+        msg.textContent = "Task created successfully!";
         msg.className = "message success";
         form.reset();
       } catch (err) {

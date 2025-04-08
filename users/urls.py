@@ -3,7 +3,7 @@ from django.shortcuts import render
 from .views import (ManagerRegisterView, EmployeeRegisterView, EmployeeLoginView, ManagerLoginView, ForgotPasswordView, ResetPasswordView,
                     get_csrf_token, reset_password_page, employee_dashboard, register_manager, ManagerDashboardView, EmployeeDashboardView,
                     dashboard_Page, register_emp, emp_login_page, manager_login_page,
-                    EmployeeListView, list_employee, LogoutView, logout_view)
+                    EmployeeListView, list_employee, LogoutView, logout_view,employee_profile,EmployeeProfileView)
 
 urlpatterns = [
 
@@ -40,6 +40,8 @@ urlpatterns = [
     path('list_employee/',EmployeeListView.as_view(),name='emaployee_list'),
     path('employees/',list_employee,name='list_employees'),
     path('employee-tasks/', lambda request: render(request, 'employee_tasks.html'), name='employee-tasks'),
+    path('employee/profile/<str:username>/',EmployeeProfileView.as_view(),name='employee-profile'),
+    path('employee_profile/',employee_profile,name='employee_profile'),
 
     # Logout URLs
     path('logout/', LogoutView.as_view(), name='logout'),

@@ -1,11 +1,9 @@
-from rest_framework import generics, status, permissions
+from rest_framework import generics, status, permissions,response
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from rest_framework_simplejwt.views import TokenBlacklistView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-from django.contrib.auth import authenticate
 from django.db import models
 from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
 from notifications.email_services import send_email_notification
@@ -17,10 +15,12 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task
 from.models import CustomUser,UserRoles
-from tasks.permissions import IsManager
+from tasks.permissions import IsManager,IsEmployee
 from rest_framework.permissions import AllowAny
+from tasks.serializers import TaskTitleSerializer, TaskSerializer
 from django.urls import reverse
-from tasks.serializers import TaskSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 User = get_user_model()
@@ -245,10 +245,8 @@ class ResetPasswordView(generics.GenericAPIView):
 
 class EmployeeDashboardView(generics.ListAPIView):
     serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [permissions.IsAuthenticated, IsEmployee]
     def get_queryset(self):
-        # Get tasks assigned to the current user with optimized query
         return Task.objects.select_related('assigned_by').filter(
             assigned_to=self.request.user
         ).annotate(
@@ -257,79 +255,70 @@ class EmployeeDashboardView(generics.ListAPIView):
         ).order_by('due_date')
 
     def list(self, request, *args, **kwargs):
-        # Get the queryset and serialize it
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
 
-        # Calculate task statistics
         total_tasks = queryset.count()
         completed_tasks = queryset.filter(status='completed').count()
         in_progress_tasks = queryset.filter(status='in_progress').count()
         pending_tasks = queryset.filter(status='pending').count()
 
-        # Return API response if requested via API
-        if request.accepted_renderer.format == 'json':
-            return Response({
-                'tasks': serializer.data,
-                'task_stats': {
-                    'total': total_tasks,
-                    'completed': completed_tasks,
-                    'in_progress': in_progress_tasks,
-                    'pending': pending_tasks
-                }
-            })
-
-        # Otherwise render the template
-        context = {
-            'employee': request.user,
-            'tasks': queryset,
+        return Response({
+            'tasks': serializer.data,
             'task_stats': {
                 'total': total_tasks,
                 'completed': completed_tasks,
                 'in_progress': in_progress_tasks,
                 'pending': pending_tasks
             }
-        }
-        return render(request, 'employee_dashboard.html', context)
+        })
+
 
 @login_required
 def employee_dashboard(request):
     return render(request,'employee_dashboard.html')
 
 # manager Dashboard
-
 class ManagerDashboardView(generics.GenericAPIView):
     """
-    API for managers to view their assigned employees, tasks, and tech stacks.
+    API for managers to view their employees and assignable tasks.
     """
     permission_classes = [permissions.IsAuthenticated, IsManager]
 
     def get(self, request, *args, **kwargs):
         manager = request.user
-        employees = User.objects.filter(role="Employee")  # Get all employees under manager
-
-        # Create a list to store employees with their assigned tasks
+        employees = User.objects.filter(role="Employee")
         employees_with_tasks = []
 
         for employee in employees:
-            # Get tasks assigned to this employee by the current manager
             employee_tasks = Task.objects.filter(assigned_to=employee, assigned_by=manager)
-
-            # Serialize the employee
             employee_data = EmployeeSerializer(employee).data
-
             # Only get task titles instead of full task data
             task_titles = [task.title for task in employee_tasks]
 
             # Add tasks to employee data
-            employee_data['assigned_tasks'] = task_titles
-            employee_data['task_count'] = employee_tasks.count()
+            employee_data["assigned_tasks"] = task_titles
+            employee_data["task_count"] = employee_tasks.count()
+            if not employee_data.get("tech_stack"):
+                employee_data["tech_stack"] = "No tech stack specified"
 
-            # Add to the list
             employees_with_tasks.append(employee_data)
 
-        return Response({
-            "employees": employees_with_tasks  # Only includes employees with their tasks and task count
+        # Unassigned tasks by this manager
+        available_tasks = Task.objects.filter(assigned_to__isnull=True, assigned_by=manager)
+        available_tasks_data = TaskTitleSerializer(available_tasks, many=True).data
+
+        # Manager profile info
+        manager_data = {
+            "first_name": manager.first_name,
+            "last_name": manager.last_name,
+            "profile_photo": manager.profile_photo.url if manager.profile_photo else None
+        }
+
+        return response.Response({
+            "manager": manager_data,
+            "employees": employees_with_tasks,
+            "available_tasks": available_tasks_data
         })
 
 def dashboard_Page(request):
@@ -359,3 +348,20 @@ class EmployeeListView(generics.ListAPIView):
 
 def list_employee(request):
     return render(request,'employee_list.html')
+
+
+class EmployeeProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated,IsManager]
+
+    def get(self, request):
+        user = request.user
+
+        # Check if the user is an employee (optional filter)
+        if user.role != 'EMPLOYEE':
+            return Response({"detail": "You are not authorized to view this profile."}, status=403)
+
+        serializer = EmployeeSerializer(user)
+        return Response(serializer.data) 
+
+def employee_profile(request):
+    return render(request,'employee_profile.html')

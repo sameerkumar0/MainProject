@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Task, TaskAssignment, TaskComment, TaskProgress
+from .models import Task, TaskAssignment, TaskProgress
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -23,17 +23,18 @@ class TaskSerializer(serializers.ModelSerializer):
                   'created_at', 'due_date', 'progress', 'days_remaining', 'is_overdue']
         read_only_fields = ['assigned_by', 'created_at', 'progress']
 
+class TaskTitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['id', 'title']
+
 class TaskDetailSerializer(TaskSerializer):
     comments = serializers.SerializerMethodField()
     progress_updates = serializers.SerializerMethodField()
     assignments = serializers.SerializerMethodField()
 
     class Meta(TaskSerializer.Meta):
-        fields = TaskSerializer.Meta.fields + ['comments', 'progress_updates', 'assignments']
-
-    def get_comments(self, obj):
-        comments = obj.comments.all()[:5]  # Get the 5 most recent comments
-        return TaskCommentSerializer(comments, many=True).data
+        fields = TaskSerializer.Meta.fields + ['progress_updates', 'assignments']
 
     def get_progress_updates(self, obj):
         updates = obj.progress_updates.all()[:3]  # Get the 3 most recent updates
@@ -53,13 +54,6 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
                   'accepted', 'accepted_at', 'completed_at', 'estimated_hours', 'actual_hours']
         read_only_fields = ['assigned_at', 'accepted_at', 'completed_at']
 
-class TaskCommentSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
-
-    class Meta:
-        model = TaskComment
-        fields = ['id', 'task', 'user', 'user_name', 'comment', 'created_at']
-        read_only_fields = ['created_at']
 
 class TaskProgressSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)

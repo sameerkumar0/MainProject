@@ -80,21 +80,6 @@ class TaskAssignment(models.Model):
         self.task.progress = 100
         self.task.save()
 
-class TaskComment(models.Model):
-    """
-    Comments on tasks for communication between managers and employees.
-    """
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_comments')
-    comment = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"Comment by {self.user.username} on {self.task.title}"
-
 class TaskProgress(models.Model):
     """
     Tracks progress updates for tasks.

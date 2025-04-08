@@ -1,125 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Registration</title>
-    <style>
-        body {
-            background-color: #2e2727;
-            color: #ffffff;
-            font-family: 'Poppins', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: #1e1e1e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
-            width: 400px;
-            text-align: center;
-            transition: transform 0.3s ease-in-out;
-        }
-        .container:hover {
-            transform: scale(1.02);
-        }
-        h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #bb86fc;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 6px;
-            background: #333;
-            color: #fff;
-            font-size: 16px;
-            transition: background 0.3s ease-in-out;
-        }
-        input:focus {
-            background: #444;
-            outline: none;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            background: linear-gradient(135deg, #6200ea, #bb86fc);
-            color: #fff;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            transition: background 0.3s ease-in-out;
-        }
-        button:hover {
-            background: linear-gradient(135deg, #3700b3, #9a67ea);
-        }
-        .login-link {
-            margin-top: 15px;
-            font-size: 14px;
-        }
-        .login-link a {
-            color: #bb86fc;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manager Registration</title>
+  <style>
+    body {
+      background-color: #2e2727;
+      color: #ffffff;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #1e1e1e;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
+      width: 400px;
+      text-align: center;
+      transition: transform 0.3s ease-in-out;
+    }
+    .container:hover {
+      transform: scale(1.02);
+    }
+    h2 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #bb86fc;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      background: #333;
+      color: #fff;
+      font-size: 16px;
+      transition: background 0.3s ease-in-out;
+    }
+    input:focus {
+      background: #444;
+      outline: none;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #6200ea, #bb86fc);
+      color: #fff;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      transition: background 0.3s ease-in-out;
+    }
+    button:hover {
+      background: linear-gradient(135deg, #3700b3, #9a67ea);
+    }
+    .login-link {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .login-link a {
+      color: #bb86fc;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Register Manager</h2>
-        <form id="registerForm">
-            <input type="text" id="first_name" placeholder="First Name" required>
-            <input type="text" id="last_name" placeholder="Last Name" required>
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
+  <div class="container">
+    <h2>Register Manager</h2>
+    <form id="registerForm">
+      <input type="text" id="first_name" placeholder="First Name" required />
+      <input type="text" id="last_name" placeholder="Last Name" required />
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Register</button>
+    </form>
+    <p class="login-link">
+      Already have an account? <a href="{% url 'manager-login' %}">Login</a>
+    </p>
+  </div>
 
-        <p class="login-link">Already have an account? <a href="{% url 'manager_login' %}">Login</a></p>
-    </div>
+  <script>
+    document.getElementById("registerForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
 
-    <script>
-        document.getElementById("registerForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
-            const formData = {
-                first_name: document.getElementById("first_name").value,
-                last_name: document.getElementById("last_name").value,
-                username: document.getElementById("username").value,
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
-            };
+      const formData = {
+        first_name: document.getElementById("first_name").value,
+        last_name: document.getElementById("last_name").value,
+        username: document.getElementById("username").value,
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value
+      };
 
-            try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/register/manager/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData)
-                });
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert("Manager registered successfully!");
-                    window.location.href = "{% url 'manager_login' %}";  // Redirect to login
-                } else {
-                    alert(data.error || "Registration failed");
-                }
-            } catch (error) {
-                console.error("Error:", error);
-            }
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/users/register/manager/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(formData)
         });
-    </script>
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert("Manager registered successfully!");
+          window.location.href = "{% url 'manager-login' %}";
+        } else {
+          let errorMsg = "";
+          for (let key in data) {
+            errorMsg += `${key}: ${data[key].join(", ")}\n`;
+          }
+          alert(errorMsg || "Registration failed");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        alert("Something went wrong. Please try again.");
+      }
+    });
+  </script>
 </body>
 </html>

@@ -4,10 +4,10 @@ from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
-from .models import Task, TaskAssignment, TaskComment, TaskProgress
+from .models import Task, TaskAssignment, TaskProgress
 from .serializers import (
     TaskSerializer, TaskDetailSerializer, TaskAssignmentSerializer,
-    TaskCommentSerializer, TaskProgressSerializer, TaskAssignmentCreateSerializer
+     TaskProgressSerializer, TaskAssignmentCreateSerializer
 )
 from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
@@ -15,10 +15,12 @@ from notifications.email_services import send_email_notification
 from django.db import transaction
 from django.shortcuts import render
 from rest_framework.exceptions import ValidationError
+from django.contrib.auth.decorators import login_required
 
 class TaskCreateView(generics.CreateAPIView):
     """
-    Only Managers can create new tasks and assign them to Employees.
+    Managers can create tasks without assigning them immediately.
+    Assignment will be handled by a separate API.
     """
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated, IsManager]
@@ -26,42 +28,13 @@ class TaskCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user  # The logged-in manager
 
-        # Get assigned_to user from request data
-        assigned_to = serializer.validated_data.get("assigned_to")
+        # Prevent assignment in this view
+        if "assigned_to" in serializer.validated_data:
+            raise ValidationError({"detail": "Do not assign an employee during task creation."})
 
-        # Ensure assigned_to is an employee
-        if not assigned_to or assigned_to.role != "Employee":
-            raise ValidationError({"assigned_to": "Tasks can only be assigned to employees."})
-
-        with transaction.atomic():  # Ensures atomicity
-            task = serializer.save(assigned_by=user)  # Assign task with manager info
-
-            # Create a TaskAssignment record
-            due_date = serializer.validated_data.get('due_date')
-            estimated_hours = None
-            if due_date:
-                # Estimate hours based on due date (8 hours per workday)
-                days_until_due = (due_date - timezone.now()).days
-                if days_until_due > 0:
-                    estimated_hours = days_until_due * 8
-
-            TaskAssignment.objects.create(
-                task=task,
-                employee=assigned_to,
-                estimated_hours=estimated_hours
-            )
-
-            # Send email notification
-            if assigned_to.email:
-                send_email_notification(
-                    to_email=assigned_to.email,
-                    subject="New Task Assigned",
-                    message=f"Dear {assigned_to.username},\n\n"
-                            f"You have been assigned a new task: {task.title}.\n"
-                            f"Description: {task.description}\n\n"
-                            f"Best regards,\n{user.username}"
-                )
-
+        with transaction.atomic():
+            task = serializer.save(assigned_by=user)
+@login_required
 def task_create(request):
     return render(request,'tasks/task_create.html')
 
@@ -242,34 +215,12 @@ class TaskAssignmentListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
-class TaskCommentListCreateView(generics.ListCreateAPIView):
-    """
-    List all comments for a task or create a new comment.
-    """
-    serializer_class = TaskCommentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        task_id = self.kwargs.get('task_id')
-        return TaskComment.objects.filter(task_id=task_id)
-
-    def perform_create(self, serializer):
-        task_id = self.kwargs.get('task_id')
-        task = get_object_or_404(Task, pk=task_id)
-
-        # Check if user is associated with this task
-        user = self.request.user
-        if user.role != 'Manager' and task.assigned_to != user:
-            raise ValidationError("You can only comment on tasks assigned to you.")
-
-        serializer.save(task=task, user=user)
-
 class TaskProgressListCreateView(generics.ListCreateAPIView):
     """
     List all progress updates for a task or create a new progress update.
     """
     serializer_class = TaskProgressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsManager]
 
     def get_queryset(self):
         task_id = self.kwargs.get('task_id')
