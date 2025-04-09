@@ -1,13 +1,12 @@
 from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
 from .models import Task, TaskAssignment, TaskProgress
 from .serializers import (
-    TaskSerializer, TaskDetailSerializer, TaskAssignmentSerializer,
-     TaskProgressSerializer, TaskAssignmentCreateSerializer
+    TaskSerializer, TaskDetailSerializer,TaskProgressSerializer,
+    TaskAssignmentCreateSerializer
 )
 from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
@@ -17,6 +16,9 @@ from django.shortcuts import render
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from users.models import CustomUser
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.views import View
+from django.core.paginator import Paginator
 
 
 class TaskCreateView(generics.CreateAPIView):
@@ -201,28 +203,30 @@ class TaskAssignmentListView(generics.ListCreateAPIView):
     """
     List all task assignments or create a new one.
     """
-    serializer_class = TaskAssignmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsManager]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return TaskAssignmentCreateSerializer
-        return TaskAssignmentSerializer
+        return TaskAssignmentCreateSerializer
 
     def get_queryset(self):
         user = self.request.user
         if user.role == 'Manager':
-            return TaskAssignment.objects.all()
+            return TaskAssignment.objects.filter(task__assigned_by=user)
         return TaskAssignment.objects.filter(employee=user)
 
     def perform_create(self, serializer):
+        task = serializer.validated_data.get('task')
+        if self.request.user.role != 'Manager' or task.assigned_by != self.request.user:
+            raise PermissionDenied("Only the assigning manager can create assignments for their tasks.")
         serializer.save()
 
-
+@login_required
 def task_assignment_page(request):
     if request.user.role == 'Manager':
-        assignments = TaskAssignment.objects.all()
-        tasks = Task.objects.all()
+        assignments = TaskAssignment.objects.filter(task__assigned_by=request.user)
+        tasks = Task.objects.filter(assigned_by=request.user)
         employees = CustomUser.objects.filter(role='Employee')
     else:
         assignments = TaskAssignment.objects.filter(employee=request.user)
@@ -235,6 +239,7 @@ def task_assignment_page(request):
         'employees': employees,
         'user': request.user
     })
+
 
 
 class TaskProgressListCreateView(generics.ListCreateAPIView):
@@ -264,3 +269,109 @@ class TaskProgressListCreateView(generics.ListCreateAPIView):
 
         serializer.save(task=task, updated_by=user)
 
+
+
+class EmployeeDashboardView(View):
+    """
+    View for the employee dashboard.
+    Displays task overview, priority tasks, recent activity, and all tasks.
+    """
+    template_name = 'employee_dashboard.html'
+    
+    def get(self, request):
+        """
+        Handle GET request for the employee dashboard.
+        Fetches all necessary data and renders the dashboard template.
+        """
+        # Get the current employee
+        employee = request.user
+        
+        # Get all tasks assigned to this employee
+        tasks = Task.objects.filter(assigned_to=employee)
+        
+        # Calculate task metrics
+        total_tasks = tasks.count()
+        in_progress_tasks = tasks.filter(status='in_progress').count()
+        completed_tasks = tasks.filter(status='completed').count()
+        pending_tasks = tasks.filter(status='pending').count()
+        
+        # Calculate overdue tasks
+        today = timezone.now().date()
+        overdue_tasks = tasks.filter(
+            due_date__lt=today, 
+            status__in=['pending', 'in_progress']
+        ).count()
+        
+        # Get priority tasks (high priority or urgent, not completed)
+        priority_tasks = tasks.filter(
+            priority__in=['high', 'urgent'],
+            status__in=['pending', 'in_progress']
+        ).order_by('due_date')[:5]  # Limit to 5 tasks
+        
+        # Get recent activity (task updates, new assignments)
+        recent_activities = []
+        
+        # Get task progress updates
+        progress_updates = TaskProgress.objects.filter(
+            task__assigned_to=employee
+        ).order_by('-created_at')[:5]
+        
+        for update in progress_updates:
+            recent_activities.append({
+                'type': 'progress_update',
+                'task': update.task,
+                'progress': update.progress,
+                'timestamp': update.created_at
+            })
+        
+        # Get recent task assignments
+        recent_assignments = tasks.order_by('-created_at')[:5]
+        
+        for task in recent_assignments:
+            recent_activities.append({
+                'type': 'assignment',
+                'task': task,
+                'timestamp': task.created_at
+            })
+        
+        # Sort activities by timestamp
+        recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        recent_activities = recent_activities[:5]  # Limit to 5 activities
+        
+        # Get all tasks with pagination
+        paginator = Paginator(tasks.order_by('due_date'), 10)
+        page = request.GET.get('page', 1)
+        all_tasks = paginator.get_page(page)
+        
+        # Get task calendar data (tasks grouped by due date)
+        calendar_data = {}
+        
+        for task in tasks:
+            if task.due_date:
+                date_str = task.due_date.strftime('%Y-%m-%d')
+                if date_str not in calendar_data:
+                    calendar_data[date_str] = []
+                calendar_data[date_str].append(task)
+        
+        # Prepare context for the template
+        context = {
+            'employee': employee,
+            'metrics': {
+                'total': total_tasks,
+                'in_progress': in_progress_tasks,
+                'completed': completed_tasks,
+                'pending': pending_tasks,
+                'overdue': overdue_tasks
+            },
+            'priority_tasks': priority_tasks,
+            'recent_activities': recent_activities,
+            'all_tasks': all_tasks,
+            'calendar_data': calendar_data
+        }
+        
+        return render(request, self.template_name, context)
+
+
+@login_required
+def employee_dashboard(request):
+    return render(request,'employee_dashboard.html')

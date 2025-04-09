@@ -228,40 +228,38 @@ class ResetPasswordView(generics.GenericAPIView):
 
 
 
-class EmployeeDashboardView(generics.ListAPIView):
-    serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated, IsEmployee]
-    def get_queryset(self):
-        return Task.objects.select_related('assigned_by').filter(
-            assigned_to=self.request.user
-        ).annotate(
-            assignment_date=models.F('created_at'),
-            submission_date=models.F('due_date')
-        ).order_by('due_date')
+# class EmployeeDashboardView(generics.ListAPIView):
+#     serializer_class = TaskSerializer
+#     permission_classes = [permissions.IsAuthenticated, IsEmployee]
+#     def get_queryset(self):
+#         return Task.objects.select_related('assigned_by').filter(
+#             assigned_to=self.request.user
+#         ).annotate(
+#             assignment_date=models.F('created_at'),
+#             submission_date=models.F('due_date')
+#         ).order_by('due_date')
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         serializer = self.get_serializer(queryset, many=True)
 
-        total_tasks = queryset.count()
-        completed_tasks = queryset.filter(status='completed').count()
-        in_progress_tasks = queryset.filter(status='in_progress').count()
-        pending_tasks = queryset.filter(status='pending').count()
+#         total_tasks = queryset.count()
+#         completed_tasks = queryset.filter(status='completed').count()
+#         in_progress_tasks = queryset.filter(status='in_progress').count()
+#         pending_tasks = queryset.filter(status='pending').count()
 
-        return Response({
-            'tasks': serializer.data,
-            'task_stats': {
-                'total': total_tasks,
-                'completed': completed_tasks,
-                'in_progress': in_progress_tasks,
-                'pending': pending_tasks
-            }
-        })
+#         return Response({
+#             'tasks': serializer.data,
+#             'task_stats': {
+#                 'total': total_tasks,
+#                 'completed': completed_tasks,
+#                 'in_progress': in_progress_tasks,
+#                 'pending': pending_tasks
+#             }
+#         })
 
 
-@login_required
-def employee_dashboard(request):
-    return render(request,'employee_dashboard.html')
+
 
 # manager Dashboard
 
@@ -370,7 +368,7 @@ class ManagerDashboardView(APIView):
 def dashboard_Page(request):
     return render(request,'manager_dashboard.html')
 
-
+#csrf handling
 from django.middleware.csrf import get_token
 from django.http import JsonResponse
 

@@ -203,7 +203,7 @@
 
         if (response.ok) {
           alert("Employee registered successfully!");
-          window.location.href = "login.html"; // Replace with actual login URL
+          window.location.href = "{% url 'emp_login' %}"; // Replace with actual login URL
         } else {
           let errorMsg = "";
           for (let key in data) {

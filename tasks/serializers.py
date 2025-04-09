@@ -45,18 +45,9 @@ class TaskDetailSerializer(TaskSerializer):
 
     def get_assignments(self, obj):
         assignments = obj.assignments.all()
-        return TaskAssignmentSerializer(assignments, many=True).data
+        return TaskAssignmentCreateSerializer(assignments, many=True).data
 
 
-class TaskAssignmentSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='employee.username', read_only=True)
-    task_title = serializers.CharField(source='task.title', read_only=True)
-
-    class Meta:
-        model = TaskAssignment
-        fields = ['id', 'task', 'task_title', 'employee', 'employee_name', 'assigned_at',
-                  'accepted', 'accepted_at', 'completed_at', 'estimated_hours', 'actual_hours']
-        read_only_fields = ['assigned_at', 'accepted_at', 'completed_at']
 
 
 class TaskProgressSerializer(serializers.ModelSerializer):

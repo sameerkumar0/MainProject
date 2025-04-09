@@ -1,9 +1,11 @@
 from django.urls import path
 from django.shortcuts import render
 from .views import (ManagerRegisterView, EmployeeRegisterView, EmployeeLoginView, ManagerLoginView, ForgotPasswordView, ResetPasswordView,
-                    get_csrf_token, reset_password_page, employee_dashboard, register_manager, ManagerDashboardView, EmployeeDashboardView,
+                    get_csrf_token, reset_password_page, register_manager, ManagerDashboardView,
                     dashboard_Page, register_emp, emp_login_page, manager_login_page,
                     EmployeeListView, list_employee, LogoutView, logout_view,employee_profile,EmployeeProfileView)
+
+from tasks.views import employee_dashboard,EmployeeDashboardView
 
 urlpatterns = [
 
