@@ -32,22 +32,30 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(username, email, password, **extra_fields)
 
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class CustomUser(AbstractUser):
     """Custom user model with role-based access control."""
-    
     role = models.CharField(max_length=20, choices=UserRoles.choices, default=UserRoles.EMPLOYEE)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-    profile_photo = models.ImageField(upload_to="profiles/", blank=True, null=True)
-    tech_stack = models.TextField(blank=True, null=True)  # Only for employees
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    tech_stack = models.CharField(max_length=255, null=True, blank=True)
+    is_available = models.BooleanField(default=True)  # Employee availability
 
     # Many employees can have one manager
     manager = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="employees"
     )
 
+    # Optional department field
+    department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True, blank=True)
+
     objects = CustomUserManager()  # Assign custom manager
 
-    REQUIRED_FIELDS = ["email"]  # Required for user creation
 
     def is_manager(self):
         return self.role == UserRoles.MANAGER

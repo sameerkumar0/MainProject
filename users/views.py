@@ -3,24 +3,21 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.db import models
 from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
 from notifications.email_services import send_email_notification
-import random
-import string
-from django.contrib.auth.hashers import make_password
-from django.conf import settings
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee
 from rest_framework.permissions import AllowAny
-from tasks.serializers import TaskTitleSerializer, TaskSerializer
+from tasks.serializers import TaskSerializer
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from tasks.models import TaskAssignment
+from django.utils import timezone
+from django.db.models import Count
+from rest_framework.permissions import IsAuthenticated
 
 
 User = get_user_model()
@@ -28,27 +25,21 @@ User = get_user_model()
 class EmployeeRegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = EmployeeSerializer
-    permission_classes = [permissions.AllowAny]  # Anyone can register
+    permission_classes = [permissions.AllowAny]
 
-    def perform_create(self, serializer):
-        try:
-            user = serializer.save()
-            print(f"DEBUG: Employee created - {user.username}")
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
 
-            # Send a welcome email (optional)
-            email_subject = "Welcome to the Team!"
-            email_body = (
-                f"Hello {user.first_name},\n\n"
-                f"Your employee account has been created successfully!\n"
-                f"Username: {user.username}\n"
-                f"Email: {user.email}\n\n"
-                "Please log in to your account to get started."
-            )
-            send_email_notification(user.email, email_subject, email_body)
-
-        except Exception as e:
-            print(f"DEBUG: Error - {str(e)}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                print(f"DEBUG: Employee created - {user.username}")
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print(f"DEBUG: Error - {str(e)}")
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def register_emp(request):
     return render(request, 'employee_register.html')
@@ -58,28 +49,22 @@ def register_emp(request):
 class ManagerRegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = ManagerRegisterSerializer
-    permission_classes = [permissions.AllowAny]  # Anyone can register
+    permission_classes = [permissions.AllowAny]  # Public access
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         try:
             user = serializer.save()
             print(f"DEBUG: Manager created - {user.username}")
 
-            # Send a welcome email (optional)
-            email_subject = "Manager Account Created"
-            email_body = (
-                f"Hello {user.first_name},\n\n"
-                f"Your manager account has been created successfully!\n"
-                f"Username: {user.username}\n"
-                f"Email: {user.email}\n\n"
-                "You can now manage your team and assign tasks."
-            )
-            send_email_notification(user.email, email_subject, email_body)  # Uncomment if you have email sending set up
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
         except Exception as e:
             print(f"DEBUG: Error - {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 def register_manager(request):
     return render(request, 'manager_register.html')
@@ -279,47 +264,108 @@ def employee_dashboard(request):
     return render(request,'employee_dashboard.html')
 
 # manager Dashboard
-class ManagerDashboardView(generics.GenericAPIView):
-    """
-    API for managers to view their employees and assignable tasks.
-    """
-    permission_classes = [permissions.IsAuthenticated, IsManager]
 
-    def get(self, request, *args, **kwargs):
-        manager = request.user
-        employees = User.objects.filter(role="Employee")
-        employees_with_tasks = []
 
-        for employee in employees:
-            employee_tasks = Task.objects.filter(assigned_to=employee, assigned_by=manager)
-            employee_data = EmployeeSerializer(employee).data
-            # Only get task titles instead of full task data
-            task_titles = [task.title for task in employee_tasks]
+class ManagerDashboardView(APIView):
+    permission_classes = [IsAuthenticated,IsManager]
 
-            # Add tasks to employee data
-            employee_data["assigned_tasks"] = task_titles
-            employee_data["task_count"] = employee_tasks.count()
-            if not employee_data.get("tech_stack"):
-                employee_data["tech_stack"] = "No tech stack specified"
+    def get(self, request):
+        user = request.user
 
-            employees_with_tasks.append(employee_data)
+        # Ensure user is a manager
+        if user.role != UserRoles.MANAGER:
+            return Response({"error": "Access denied. Only managers can access this dashboard."}, status=403)
 
-        # Unassigned tasks by this manager
-        available_tasks = Task.objects.filter(assigned_to__isnull=True, assigned_by=manager)
-        available_tasks_data = TaskTitleSerializer(available_tasks, many=True).data
-
-        # Manager profile info
+        # Manager info
         manager_data = {
-            "first_name": manager.first_name,
-            "last_name": manager.last_name,
-            "profile_photo": manager.profile_photo.url if manager.profile_photo else None
+            "id": user.id,
+            "name": f"{user.first_name} {user.last_name}",
+            "email": user.email,
+            "profile_photo": request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
+            "phone_number": user.phone_number,
         }
 
-        return response.Response({
+        # Get all employees 
+        employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE)
+        employees_data = []
+
+        for emp in employees:
+            emp_tasks = Task.objects.filter(assigned_to=emp, assigned_by=user)
+            completed_tasks = emp_tasks.filter(status="completed").count()
+
+            employees_data.append({
+                "id": emp.id,
+                "name": f"{emp.first_name} {emp.last_name}",
+                "username": emp.username,
+                "email": emp.email,
+                "department": emp.department.name if emp.department else None,
+                "tech_stack": [tech.strip() for tech in emp.tech_stack.split(",")] if emp.tech_stack else [],
+                "profile_photo": request.build_absolute_uri(emp.profile_photo.url) if emp.profile_photo else None,
+                "is_available": emp.is_available,
+                "phone_number": emp.phone_number,
+                "total_tasks": emp_tasks.count(),
+                "completed_tasks": completed_tasks,
+            })
+
+        # Upcoming deadlines (7 days)
+        today = timezone.now()
+        upcoming_tasks = Task.objects.filter(
+            assigned_by=user,
+            due_date__gte=today,
+            due_date__lte=today + timezone.timedelta(days=7)
+        ).order_by('due_date')
+
+        upcoming_deadlines = [
+            {
+                "title": task.title,
+                "due_date": task.due_date.strftime("%Y-%m-%d %H:%M"),
+                "assigned_to": f"{task.assigned_to.first_name} {task.assigned_to.last_name}",
+                "status": task.status,
+                "priority": task.priority
+            } for task in upcoming_tasks
+        ]
+
+        # Top performers (by completed tasks)
+        top_performers_query = CustomUser.objects.filter(
+            role=UserRoles.EMPLOYEE,
+            tasks__assigned_by=user,
+            tasks__status="completed"
+        ).annotate(completed=Count('tasks')).order_by('-completed')[:5]
+
+        top_performers = [
+            {
+                "id": emp.id,
+                "name": f"{emp.first_name} {emp.last_name}",
+                "completed_tasks": emp.completed,
+                "profile_photo": request.build_absolute_uri(emp.profile_photo.url) if emp.profile_photo else None,
+            }
+            for emp in top_performers_query
+        ]
+
+        # assignment history
+        assignments = TaskAssignment.objects.filter(
+            task__assigned_by=user
+        ).select_related('employee', 'task').order_by('-assigned_at')[:10]
+
+        assignment_history = [
+            {
+                "task": assign.task.title,
+                "employee": f"{assign.employee.first_name} {assign.employee.last_name}",
+                "assigned_at": assign.assigned_at.strftime("%Y-%m-%d %H:%M"),
+                "status": assign.task.status
+            }
+            for assign in assignments
+        ]
+
+        return Response({
             "manager": manager_data,
-            "employees": employees_with_tasks,
-            "available_tasks": available_tasks_data
+            "employees": employees_data,
+            "upcoming_deadlines": upcoming_deadlines,
+            "top_performers": top_performers,
+            "assignment_history": assignment_history
         })
+
+
 
 def dashboard_Page(request):
     return render(request,'manager_dashboard.html')

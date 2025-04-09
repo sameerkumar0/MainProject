@@ -16,6 +16,8 @@ from django.db import transaction
 from django.shortcuts import render
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
+from users.models import CustomUser
+
 
 class TaskCreateView(generics.CreateAPIView):
     """
@@ -34,6 +36,7 @@ class TaskCreateView(generics.CreateAPIView):
 
         with transaction.atomic():
             task = serializer.save(assigned_by=user)
+
 @login_required
 def task_create(request):
     return render(request,'tasks/task_create.html')
@@ -214,6 +217,25 @@ class TaskAssignmentListView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
+
+def task_assignment_page(request):
+    if request.user.role == 'Manager':
+        assignments = TaskAssignment.objects.all()
+        tasks = Task.objects.all()
+        employees = CustomUser.objects.filter(role='Employee')
+    else:
+        assignments = TaskAssignment.objects.filter(employee=request.user)
+        tasks = []
+        employees = []
+
+    return render(request, 'tasks/task_assign.html', {
+        'assignments': assignments,
+        'tasks': tasks,
+        'employees': employees,
+        'user': request.user
+    })
+
 
 class TaskProgressListCreateView(generics.ListCreateAPIView):
     """

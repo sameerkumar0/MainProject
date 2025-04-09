@@ -27,9 +27,8 @@ class Task(models.Model):
     document = models.FileField(upload_to='documents/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     due_date = models.DateTimeField(null=True, blank=True)
-
-    # Track task progress
     progress = models.IntegerField(default=0, help_text="Progress percentage (0-100)")
+    assigned_at = models.DateTimeField(auto_now_add=True)  # Added for dashboard history tracking
 
     def __str__(self):
         return self.title
@@ -110,4 +109,3 @@ class TaskProgress(models.Model):
             self.task.status = 'in_progress'
 
         self.task.save()
-

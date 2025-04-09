@@ -9,27 +9,30 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role']
 
+
 class TaskSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source="assigned_to.username", read_only=True)
     assigned_by_name = serializers.CharField(source="assigned_by.username", read_only=True)
     document = serializers.FileField(required=False)
     days_remaining = serializers.IntegerField(read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
+    assigned_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Task
         fields = ['id', 'title', 'description', 'assigned_to', 'assigned_to_name',
                   'assigned_by', 'assigned_by_name', 'status', 'priority', 'document',
-                  'created_at', 'due_date', 'progress', 'days_remaining', 'is_overdue']
-        read_only_fields = ['assigned_by', 'created_at', 'progress']
+                  'created_at', 'due_date', 'assigned_at', 'progress', 'days_remaining', 'is_overdue']
+        read_only_fields = ['assigned_by', 'created_at', 'progress', 'assigned_at']
+
 
 class TaskTitleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title']
 
+
 class TaskDetailSerializer(TaskSerializer):
-    comments = serializers.SerializerMethodField()
     progress_updates = serializers.SerializerMethodField()
     assignments = serializers.SerializerMethodField()
 
@@ -43,6 +46,7 @@ class TaskDetailSerializer(TaskSerializer):
     def get_assignments(self, obj):
         assignments = obj.assignments.all()
         return TaskAssignmentSerializer(assignments, many=True).data
+
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.username', read_only=True)
@@ -62,6 +66,7 @@ class TaskProgressSerializer(serializers.ModelSerializer):
         model = TaskProgress
         fields = ['id', 'task', 'updated_by', 'updated_by_name', 'progress_percentage', 'notes', 'created_at']
         read_only_fields = ['created_at']
+
 
 class TaskAssignmentCreateSerializer(serializers.ModelSerializer):
     class Meta:

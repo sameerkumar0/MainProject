@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     TaskListView, TaskCreateView, TaskUpdateStatusView, TaskDetailView,
     TaskAssignmentListView, TaskProgressListCreateView,
-    task_create, task_list
+    task_create, task_list,task_assignment_page
 )
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
 
     # Task assignment views
     path('task-assignments/', TaskAssignmentListView.as_view(), name='task-assignment-list'),  # List/create assignments
+    path('task_assign/', task_assignment_page, name='task-assignment-page'),  # Template view
 
     # Task progress views
     path('tasks/<int:task_id>/progress/', TaskProgressListCreateView.as_view(), name='task-progress-list'),  # List/create progress
