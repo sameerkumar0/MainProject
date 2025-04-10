@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Manager Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -125,14 +125,21 @@
   </style>
 </head>
 <body>
+  <!-- HEADER -->
   <div class="header">
     <div>
       <h1>Manager Dashboard</h1>
       <p>Overview of team activity and task performance</p>
     </div>
-    <div id="managerInfo">Loading...</div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button onclick="openAssignModal()" style="background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
+        + Assign Task
+      </button>
+      <div id="managerInfo" style="display: flex; align-items: center; gap: 10px;">Loading...</div>
+    </div>
   </div>
 
+  <!-- DASHBOARD -->
   <div class="dashboard-wrapper">
     <!-- Left Column -->
     <div>
@@ -140,12 +147,10 @@
         <h2 class="section-title">Employees</h2>
         <div id="employeeList"></div>
       </div>
-
       <div class="card">
         <h2 class="section-title">Upcoming Deadlines</h2>
         <ul id="upcomingDeadlines" class="deadline-list"></ul>
       </div>
-
       <div class="card">
         <h2 class="section-title">Top Performers</h2>
         <ul id="topPerformers" class="top-performers"></ul>
@@ -158,7 +163,6 @@
         <h2 class="section-title">Task Progress</h2>
         <div id="taskChart" class="chart-placeholder"></div>
       </div>
-
       <div class="card">
         <h2 class="section-title">Task Assignment History</h2>
         <ul id="assignmentHistory" class="assignment-history"></ul>
@@ -166,18 +170,71 @@
     </div>
   </div>
 
+  <!-- ASSIGN TASK MODAL -->
+  <div id="assignModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; color: black;">
+      <h3>Assign Task</h3>
+      <label>Employee Email:</label><br>
+      <input type="text" id="assignEmail" style="width: 100%; margin-bottom: 10px;"><br>
+      <label>Task Title:</label><br>
+      <input type="text" id="assignTitle" style="width: 100%; margin-bottom: 10px;"><br>
+      <label>Due Date:</label><br>
+      <input type="date" id="assignDue" style="width: 100%; margin-bottom: 15px;"><br>
+      <button onclick="submitAssignTask()" style="background: var(--primary-color); color: white; padding: 8px 15px; border: none; border-radius: 5px;">Submit</button>
+      <button onclick="closeAssignModal()" style="margin-left: 10px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
   <script>
     document.addEventListener("DOMContentLoaded", fetchDashboardData);
-  
+
+    function openAssignModal() {
+      document.getElementById("assignModal").style.display = "flex";
+    }
+
+    function closeAssignModal() {
+      document.getElementById("assignModal").style.display = "none";
+    }
+
+    async function submitAssignTask() {
+      const email = document.getElementById("assignEmail").value;
+      const title = document.getElementById("assignTitle").value;
+      const due = document.getElementById("assignDue").value;
+
+      const accessToken = localStorage.getItem("access_token");
+
+      const response = await fetch("http://127.0.0.1:8000/api/tasks/assign/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          employee_email: email,
+          title: title,
+          due_date: due
+        })
+      });
+
+      if (response.ok) {
+        alert("Task assigned successfully!");
+        closeAssignModal();
+        fetchDashboardData(); // refresh data
+      } else {
+        alert("Failed to assign task.");
+      }
+    }
+
     async function fetchDashboardData() {
       const accessToken = localStorage.getItem("access_token");
-  
+
       try {
         const response = await fetch("http://127.0.0.1:8000/api/users/manager/dashboard/", {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         const data = await response.json();
-  
+
         renderManager(data.manager);
         renderEmployees(data.employees);
         renderDeadlines(data.upcoming_deadlines);
@@ -187,21 +244,21 @@
         console.error("Failed to fetch dashboard data", err);
       }
     }
-  
+
     function renderManager(manager) {
       document.getElementById("managerInfo").innerHTML = `
         <span>${manager.name || 'Manager'}</span>
-        <img src="${manager.profile_photo || '/static/default-avatar.png'}" style="width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; border: 2px solid white;" />
+        <img src="${manager.profile_photo || '/static/default-avatar.png'}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white;" />
       `;
     }
-  
+
     function renderEmployees(employees) {
       const container = document.getElementById("employeeList");
       container.innerHTML = "";
       employees.forEach(emp => {
         const card = document.createElement("div");
         card.className = "employee-card";
-  
+
         card.innerHTML = `
           <div class="employee-name">${emp.name}</div>
           <div class="employee-meta">${emp.email}</div>
@@ -212,11 +269,11 @@
             ${emp.is_available ? 'Available' : 'Unavailable'}
           </div>
         `;
-  
+
         container.appendChild(card);
       });
     }
-  
+
     function renderDeadlines(deadlines) {
       const list = document.getElementById("upcomingDeadlines");
       list.innerHTML = "";
@@ -224,7 +281,7 @@
         list.innerHTML += `<li class="deadline-item">${item.title} - Due: ${item.due_date} - ${item.status} (${item.priority})</li>`;
       });
     }
-  
+
     function renderPerformers(performers) {
       const list = document.getElementById("topPerformers");
       list.innerHTML = "";
@@ -232,7 +289,7 @@
         list.innerHTML += `<li class="performer-item">${p.name} - ${p.completed_tasks} tasks</li>`;
       });
     }
-  
+
     function renderHistory(history) {
       const list = document.getElementById("assignmentHistory");
       list.innerHTML = "";

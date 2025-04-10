@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 class UserRoles(models.TextChoices):
     MANAGER = "Manager"
@@ -54,11 +56,107 @@ class CustomUser(AbstractUser):
     # Optional department field
     department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True, blank=True)
 
-    objects = CustomUserManager()  # Assign custom manager
+    # New fields for dashboard
+    last_active = models.DateTimeField(null=True, blank=True)
+    availability_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('available', 'Available'),
+            ('busy', 'Busy'),
+            ('away', 'Away')
+        ],
+        default='available'
+    )
 
+    objects = CustomUserManager()  # Assign custom manager
 
     def is_manager(self):
         return self.role == UserRoles.MANAGER
 
     def is_employee(self):
         return self.role == UserRoles.EMPLOYEE
+
+    # Dashboard helper methods
+    def get_completed_tasks_count(self):
+        return self.tasks.filter(status='completed').count()
+
+    def get_pending_tasks_count(self):
+        return self.tasks.filter(status='pending').count()
+
+    def get_in_progress_tasks_count(self):
+        return self.tasks.filter(status='in_progress').count()
+
+    def get_overdue_tasks_count(self):
+        return self.tasks.filter(
+            due_date__lt=timezone.now(),
+            status__in=['pending', 'in_progress']
+        ).count()
+
+    def get_tasks_due_today(self):
+        today = timezone.now().date()
+        return self.tasks.filter(
+            due_date__date=today
+        )
+
+    def get_tasks_due_this_week(self):
+        today = timezone.now().date()
+        week_end = today + timedelta(days=7)
+        return self.tasks.filter(
+            due_date__date__range=[today, week_end]
+        )
+
+    def get_completion_rate(self):
+        total = self.tasks.count()
+        if total == 0:
+            return 0
+        completed = self.get_completed_tasks_count()
+        return (completed / total) * 100
+
+    # Manager-specific methods
+    def get_team_workload(self):
+        """Returns workload distribution across team members."""
+        if not self.is_manager():
+            return None
+
+        employees = self.employees.all()
+        workload_data = []
+
+        for employee in employees:
+            pending_tasks = employee.get_pending_tasks_count()
+            in_progress_tasks = employee.get_in_progress_tasks_count()
+
+            workload_data.append({
+                'employee': employee,
+                'pending_tasks': pending_tasks,
+                'in_progress_tasks': in_progress_tasks,
+                'total_active_tasks': pending_tasks + in_progress_tasks
+            })
+
+        return workload_data
+
+    def get_employee_performance(self):
+        """Returns performance metrics for employees (for managers)."""
+        if not self.is_manager():
+            return None
+
+        employees = self.employees.all()
+        performance_data = []
+
+        for employee in employees:
+            total_tasks = employee.tasks.count()
+            completed_tasks = employee.get_completed_tasks_count()
+            overdue_tasks = employee.get_overdue_tasks_count()
+
+            completion_rate = 0
+            if total_tasks > 0:
+                completion_rate = (completed_tasks / total_tasks) * 100
+
+            performance_data.append({
+                'employee': employee,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'overdue_tasks': overdue_tasks,
+                'completion_rate': completion_rate
+            })
+
+        return performance_data

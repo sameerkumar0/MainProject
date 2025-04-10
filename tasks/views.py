@@ -1,12 +1,16 @@
 from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q
-from .models import Task, TaskAssignment, TaskProgress
+from datetime import timedelta
+from .models import Task, TaskAssignment, TaskProgress, Notification, UserActivity
 from .serializers import (
-    TaskSerializer, TaskDetailSerializer,TaskProgressSerializer,
-    TaskAssignmentCreateSerializer
+    TaskSerializer, TaskDetailSerializer, TaskProgressSerializer,
+    NotificationSerializer, UserActivitySerializer,
+    TaskMetricsSerializer, EmployeeDashboardSerializer,
+     ManagerDashboardSerializer
 )
 from .permissions import IsManager, IsEmployee
 from tasks.permissions import IsTaskAssignedToEmployee
@@ -18,30 +22,50 @@ from django.contrib.auth.decorators import login_required
 from users.models import CustomUser
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import View
-from django.core.paginator import Paginator
+from django.http import HttpResponseForbidden
 
+from rest_framework.permissions import IsAuthenticated
+from .models import Task, User
 
-class TaskCreateView(generics.CreateAPIView):
-    """
-    Managers can create tasks without assigning them immediately.
-    Assignment will be handled by a separate API.
-    """
-    serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated, IsManager]
+# Task Creation View (Separate)
+class TaskCreateView(APIView):
+    permission_classes = [permissions.IsAuthenticated,IsManager]
 
-    def perform_create(self, serializer):
-        user = self.request.user  # The logged-in manager
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['assigned_by'] = request.user.id  # Automatically set the manager (creator)
+        serializer = TaskSerializer(data=data, context={'request': request})
 
-        # Prevent assignment in this view
-        if "assigned_to" in serializer.validated_data:
-            raise ValidationError({"detail": "Do not assign an employee during task creation."})
+        if serializer.is_valid():
+            task = serializer.save(assigned_by=request.user)
+            return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            task = serializer.save(assigned_by=user)
 
 @login_required
 def task_create(request):
-    return render(request,'tasks/task_create.html')
+    if request.user.role != 'Manager':
+        return HttpResponseForbidden("You are not authorized to create tasks.")
+
+    return render(request, 'tasks/task_create.html')
+
+# Task Assignment View (Separate)
+class TaskAssignView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['assigned_by'] = request.user.id  # Automatically set the manager (creator)
+
+        # Pass the request context into the serializer
+        serializer = TaskSerializer(data=data, context={'request': request})
+
+        if serializer.is_valid():
+            task = serializer.save(assigned_by=request.user)
+            return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 class TaskListView(generics.ListAPIView):
     """
@@ -273,105 +297,335 @@ class TaskProgressListCreateView(generics.ListCreateAPIView):
 
 class EmployeeDashboardView(View):
     """
-    View for the employee dashboard.
+    Template view for the employee dashboard.
     Displays task overview, priority tasks, recent activity, and all tasks.
     """
     template_name = 'employee_dashboard.html'
-    
+
     def get(self, request):
         """
-        Handle GET request for the employee dashboard.
-        Fetches all necessary data and renders the dashboard template.
+        Handle GET request for the employee dashboard template.
         """
-        # Get the current employee
-        employee = request.user
-        
-        # Get all tasks assigned to this employee
-        tasks = Task.objects.filter(assigned_to=employee)
-        
-        # Calculate task metrics
+        return render(request, self.template_name)
+
+
+class EmployeeDashboardAPIView(APIView):
+    """
+    API view that provides all data needed for the employee dashboard.
+    Returns metrics, priority tasks, recent activities, and calendar data.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        Get all dashboard data for the current user.
+        """
+        user = request.user
+
+        # Always use employee data
+        if user.role == 'Employee':
+            # For employees, use their own data
+            employee = user
+            tasks = Task.objects.filter(assigned_to=employee)
+        else:
+            # For managers, we need to find an employee to show
+            # First, try to get the first employee managed by this manager
+            from users.models import CustomUser
+            employees = CustomUser.objects.filter(manager=user, role='Employee')
+
+            if employees.exists():
+                employee = employees.first()
+                tasks = Task.objects.filter(assigned_to=employee)
+            else:
+                # If no employees are managed by this manager, use the manager's data
+                employee = user
+                tasks = Task.objects.filter(assigned_by=user)
+
+        # Calculate metrics
+        today = timezone.now().date()
+        week_end = today + timedelta(days=7)
+
         total_tasks = tasks.count()
+        pending_tasks = tasks.filter(status='pending').count()
         in_progress_tasks = tasks.filter(status='in_progress').count()
         completed_tasks = tasks.filter(status='completed').count()
-        pending_tasks = tasks.filter(status='pending').count()
-        
-        # Calculate overdue tasks
-        today = timezone.now().date()
-        overdue_tasks = tasks.filter(
-            due_date__lt=today, 
-            status__in=['pending', 'in_progress']
-        ).count()
-        
-        # Get priority tasks (high priority or urgent, not completed)
+        overdue_tasks = tasks.filter(due_date__lt=today, status__in=['pending', 'in_progress']).count()
+        due_today_tasks = tasks.filter(due_date__date=today).count()
+        due_this_week_tasks = tasks.filter(due_date__date__range=[today, week_end]).count()
+
+        # Calculate completion rate
+        completion_rate = 0
+        if total_tasks > 0:
+            completion_rate = (completed_tasks / total_tasks) * 100
+
+        metrics = {
+            'total': total_tasks,
+            'pending': pending_tasks,
+            'in_progress': in_progress_tasks,
+            'completed': completed_tasks,
+            'overdue': overdue_tasks,
+            'due_today': due_today_tasks,
+            'due_this_week': due_this_week_tasks,
+            'completion_rate': completion_rate
+        }
+
+        # Get priority tasks
         priority_tasks = tasks.filter(
             priority__in=['high', 'urgent'],
             status__in=['pending', 'in_progress']
-        ).order_by('due_date')[:5]  # Limit to 5 tasks
-        
-        # Get recent activity (task updates, new assignments)
-        recent_activities = []
-        
-        # Get task progress updates
-        progress_updates = TaskProgress.objects.filter(
+        ).order_by('due_date')[:5]
+
+        # Get recent activities for the employee
+        user_activities = UserActivity.objects.filter(
+            Q(user=employee) | Q(related_task__assigned_to=employee)
+        ).order_by('-created_at')[:10]
+
+        # Get recent progress updates for the employee
+        recent_progress = TaskProgress.objects.filter(
             task__assigned_to=employee
         ).order_by('-created_at')[:5]
-        
-        for update in progress_updates:
-            recent_activities.append({
-                'type': 'progress_update',
-                'task': update.task,
-                'progress': update.progress,
-                'timestamp': update.created_at
-            })
-        
-        # Get recent task assignments
-        recent_assignments = tasks.order_by('-created_at')[:5]
-        
-        for task in recent_assignments:
-            recent_activities.append({
-                'type': 'assignment',
-                'task': task,
-                'timestamp': task.created_at
-            })
-        
-        # Sort activities by timestamp
-        recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
-        recent_activities = recent_activities[:5]  # Limit to 5 activities
-        
-        # Get all tasks with pagination
-        paginator = Paginator(tasks.order_by('due_date'), 10)
-        page = request.GET.get('page', 1)
-        all_tasks = paginator.get_page(page)
-        
-        # Get task calendar data (tasks grouped by due date)
-        calendar_data = {}
-        
-        for task in tasks:
-            if task.due_date:
-                date_str = task.due_date.strftime('%Y-%m-%d')
-                if date_str not in calendar_data:
-                    calendar_data[date_str] = []
-                calendar_data[date_str].append(task)
-        
-        # Prepare context for the template
-        context = {
-            'employee': employee,
-            'metrics': {
-                'total': total_tasks,
-                'in_progress': in_progress_tasks,
-                'completed': completed_tasks,
-                'pending': pending_tasks,
-                'overdue': overdue_tasks
-            },
+
+        # Get recent notifications for the employee
+        recent_notifications = Notification.objects.filter(
+            user=employee
+        ).order_by('-created_at')[:5]
+
+        # Prepare calendar data
+        calendar_tasks = {}
+        for task in tasks.filter(due_date__isnull=False):
+            date_str = task.due_date.strftime('%Y-%m-%d')
+            if date_str not in calendar_tasks:
+                calendar_tasks[date_str] = []
+            calendar_tasks[date_str].append(task)
+
+        # Get employee profile data
+        from users.serializers import EmployeeSerializer
+        employee_data = EmployeeSerializer(employee).data
+
+        # Prepare response data
+        dashboard_data = {
+            'user': employee_data,
+            'metrics': metrics,
             'priority_tasks': priority_tasks,
-            'recent_activities': recent_activities,
-            'all_tasks': all_tasks,
-            'calendar_data': calendar_data
+            'recent_activities': user_activities,
+            'recent_progress': recent_progress,
+            'calendar_tasks': calendar_tasks,
+            'recent_notifications': recent_notifications
         }
-        
-        return render(request, self.template_name, context)
+
+        # Serialize the data
+        serializer = EmployeeDashboardSerializer(dashboard_data)
+        return Response(serializer.data)
 
 
 @login_required
 def employee_dashboard(request):
     return render(request,'employee_dashboard.html')
+
+
+class ManagerDashboardView(View):
+    """
+    Template view for the manager dashboard.
+    """
+    template_name = 'manager_dashboard.html'
+
+    def get(self, request):
+        """
+        Handle GET request for the manager dashboard template.
+        """
+        return render(request, self.template_name)
+
+
+class ManagerDashboardAPIView(APIView):
+    """
+    API view that provides all data needed for the manager dashboard.
+    Returns team metrics, employee performance, workload distribution, and unassigned tasks.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsManager]
+
+    def get(self, request):
+        """
+        Get all dashboard data for the current manager.
+        """
+        manager = request.user
+
+        # Get employees managed by this manager
+        employees = CustomUser.objects.filter(manager=manager)
+
+        # Get all tasks created by this manager
+        manager_tasks = Task.objects.filter(assigned_by=manager)
+
+        # Calculate team metrics
+        today = timezone.now().date()
+        week_end = today + timedelta(days=7)
+
+        total_tasks = manager_tasks.count()
+        pending_tasks = manager_tasks.filter(status='pending').count()
+        in_progress_tasks = manager_tasks.filter(status='in_progress').count()
+        completed_tasks = manager_tasks.filter(status='completed').count()
+        overdue_tasks = manager_tasks.filter(due_date__lt=today, status__in=['pending', 'in_progress']).count()
+        due_today_tasks = manager_tasks.filter(due_date__date=today).count()
+        due_this_week_tasks = manager_tasks.filter(due_date__date__range=[today, week_end]).count()
+
+        # Calculate completion rate
+        completion_rate = 0
+        if total_tasks > 0:
+            completion_rate = (completed_tasks / total_tasks) * 100
+
+        team_metrics = {
+            'total': total_tasks,
+            'pending': pending_tasks,
+            'in_progress': in_progress_tasks,
+            'completed': completed_tasks,
+            'overdue': overdue_tasks,
+            'due_today': due_today_tasks,
+            'due_this_week': due_this_week_tasks,
+            'completion_rate': completion_rate
+        }
+
+        # Calculate employee performance metrics
+        employee_performance = []
+        for employee in employees:
+            employee_tasks = Task.objects.filter(assigned_to=employee)
+            total = employee_tasks.count()
+            completed = employee_tasks.filter(status='completed').count()
+            overdue = employee_tasks.filter(due_date__lt=today, status__in=['pending', 'in_progress']).count()
+
+            # Calculate average completion time for completed tasks
+            avg_completion_time = None
+            completed_tasks_with_dates = employee_tasks.filter(
+                status='completed',
+                start_date__isnull=False,
+                completed_at__isnull=False
+            )
+
+            if completed_tasks_with_dates.exists():
+                total_days = 0
+                count = 0
+                for task in completed_tasks_with_dates:
+                    delta = task.completed_at - task.start_date
+                    total_days += delta.total_seconds() / (60 * 60 * 24)  # Convert to days
+                    count += 1
+                if count > 0:
+                    avg_completion_time = total_days / count
+
+            # Calculate completion rate
+            emp_completion_rate = 0
+            if total > 0:
+                emp_completion_rate = (completed / total) * 100
+
+            employee_performance.append({
+                'employee': employee,
+                'total_tasks': total,
+                'completed_tasks': completed,
+                'overdue_tasks': overdue,
+                'completion_rate': emp_completion_rate,
+                'average_completion_time': avg_completion_time
+            })
+
+        # Calculate employee workload
+        employee_workload = []
+        for employee in employees:
+            employee_tasks = Task.objects.filter(assigned_to=employee)
+            pending = employee_tasks.filter(status='pending').count()
+            in_progress = employee_tasks.filter(status='in_progress').count()
+            upcoming_deadlines = employee_tasks.filter(
+                due_date__date__range=[today, week_end],
+                status__in=['pending', 'in_progress']
+            ).count()
+
+            employee_workload.append({
+                'employee': employee,
+                'pending_tasks': pending,
+                'in_progress_tasks': in_progress,
+                'total_active_tasks': pending + in_progress,
+                'upcoming_deadlines': upcoming_deadlines
+            })
+
+        # Get unassigned tasks
+        unassigned_tasks = Task.objects.filter(assigned_by=manager, assigned_to__isnull=True)
+
+        # Get recent activities
+        recent_activities = UserActivity.objects.filter(
+            Q(user=manager) | Q(user__in=employees)
+        ).order_by('-created_at')[:10]
+
+        # Get overdue tasks
+        overdue_task_list = manager_tasks.filter(
+            due_date__lt=today,
+            status__in=['pending', 'in_progress']
+        ).order_by('due_date')[:10]
+
+        # Prepare calendar data
+        calendar_tasks = {}
+        for task in manager_tasks.filter(due_date__isnull=False):
+            date_str = task.due_date.strftime('%Y-%m-%d')
+            if date_str not in calendar_tasks:
+                calendar_tasks[date_str] = []
+            calendar_tasks[date_str].append(task)
+
+        # Prepare response data
+        dashboard_data = {
+            'team_metrics': team_metrics,
+            'employee_performance': employee_performance,
+            'employee_workload': employee_workload,
+            'unassigned_tasks': unassigned_tasks,
+            'recent_activities': recent_activities,
+            'overdue_tasks': overdue_task_list,
+            'calendar_tasks': calendar_tasks
+        }
+
+        # Serialize the data
+        serializer = ManagerDashboardSerializer(dashboard_data)
+        return Response(serializer.data)
+
+
+class NotificationListView(generics.ListCreateAPIView):
+    """
+    List all notifications for the current user or create a new notification.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class NotificationMarkReadView(generics.UpdateAPIView):
+    """
+    Mark a notification as read.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        notification = self.get_object()
+        notification.read = True
+        notification.save()
+        return Response({'status': 'notification marked as read'}, status=status.HTTP_200_OK)
+
+
+class UserActivityListView(generics.ListAPIView):
+    """
+    List all activities for the current user.
+    """
+    serializer_class = UserActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_manager():
+            # Managers see their own activities and their employees' activities
+            return UserActivity.objects.filter(
+                Q(user=user) | Q(user__manager=user)
+            ).order_by('-created_at')
+        else:
+            # Employees see only their own activities
+            return UserActivity.objects.filter(user=user).order_by('-created_at')
+

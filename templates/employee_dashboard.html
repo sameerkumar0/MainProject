@@ -299,14 +299,55 @@
       }
     }
   </style>
+  <script>
+    // Function to get CSRF token from cookies
+    function getCsrfToken() {
+      const name = 'csrftoken';
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // Format date function
+    function formatDate(dateString) {
+      if (!dateString) return 'No due date';
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    }
+
+    // Format time ago function
+    function formatTimeAgo(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSec = Math.round(diffMs / 1000);
+      const diffMin = Math.round(diffSec / 60);
+      const diffHour = Math.round(diffMin / 60);
+      const diffDay = Math.round(diffHour / 24);
+
+      if (diffSec < 60) return 'just now';
+      if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+      if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+      return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+    }
+  </script>
 </head>
 <body>
   <div class="container">
     <header>
       <h1 class="page-title">Employee Dashboard</h1>
       <div class="user-info">
-        <div class="user-avatar">JD</div>
-        <div class="user-name">John Doe</div>
+        <div class="user-avatar" id="user-avatar">--</div>
+        <div class="user-name" id="user-name">Loading...</div>
       </div>
     </header>
 
@@ -314,24 +355,31 @@
       <div class="dashboard-card metrics-card">
         <div class="card-header">
           <h2 class="card-title">Task Overview</h2>
-          <span class="refresh-button">↻</span>
+          <span class="refresh-button" id="refresh-metrics">↻</span>
         </div>
-        <div class="metrics-grid">
+        <div class="metrics-grid" id="metrics-container">
           <div class="metric-item">
-            <div class="metric-value">12</div>
+            <div class="metric-value" id="total-tasks">-</div>
             <div class="metric-label">Total Tasks</div>
           </div>
           <div class="metric-item">
-            <div class="metric-value">5</div>
+            <div class="metric-value" id="in-progress-tasks">-</div>
             <div class="metric-label">In Progress</div>
           </div>
           <div class="metric-item">
-            <div class="metric-value">3</div>
+            <div class="metric-value" id="completed-tasks">-</div>
             <div class="metric-label">Completed</div>
           </div>
           <div class="metric-item">
-            <div class="metric-value">2</div>
+            <div class="metric-value" id="overdue-tasks">-</div>
             <div class="metric-label">Overdue</div>
+          </div>
+          <div class="metric-item" style="grid-column: span 2;">
+            <div class="metric-label">Completion Rate</div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="completion-rate-fill" style="width: 0%"></div>
+              <span class="progress-text" id="completion-rate-text">0%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -340,38 +388,23 @@
         <div class="card-header">
           <h2 class="card-title">Task Calendar</h2>
           <div class="calendar-controls">
-            <span>◀</span>
-            <span>April 2025</span>
-            <span>▶</span>
+            <span id="prev-month">◀</span>
+            <span id="current-month">Loading...</span>
+            <span id="next-month">▶</span>
           </div>
         </div>
-        <div class="calendar-container">
-          <p>Calendar View</p>
+        <div class="calendar-container" id="calendar-container">
+          <div class="loading">Loading calendar...</div>
         </div>
       </div>
 
       <div class="dashboard-card priority-card">
         <div class="card-header">
           <h2 class="card-title">Priority Tasks</h2>
-          <span class="view-all">View All</span>
+          <a href="/tasks/?priority=high,urgent" class="view-all">View All</a>
         </div>
-        <div class="task-list">
-          <div class="task-item">
-            <div>
-              <div class="task-title">Complete project documentation</div>
-              <div class="task-meta">
-                <span>Due: April 12</span>
-                <span class="badge badge-progress">In Progress</span>
-                <span class="badge badge-overdue">Overdue</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: 60%"></div>
-              </div>
-            </div>
-            <div class="task-actions">
-              <button class="btn btn-primary">Update</button>
-            </div>
-          </div>
+        <div class="task-list" id="priority-tasks-container">
+          <div class="loading">Loading priority tasks...</div>
         </div>
       </div>
 
@@ -379,11 +412,8 @@
         <div class="card-header">
           <h2 class="card-title">Recent Activity</h2>
         </div>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div>You updated "Complete project documentation"</div>
-            <div class="activity-time">Today, 9:30 AM</div>
-          </div>
+        <div class="activity-list" id="activity-container">
+          <div class="loading">Loading activities...</div>
         </div>
       </div>
 
@@ -394,52 +424,546 @@
         <div class="filter-bar">
           <div class="filter-group">
             <span class="filter-label">Status:</span>
-            <select class="filter-select">
+            <select class="filter-select" id="status-filter">
               <option value="all">All</option>
+              <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
           </div>
           <div class="filter-group">
             <span class="filter-label">Priority:</span>
-            <select class="filter-select">
+            <select class="filter-select" id="priority-filter">
               <option value="all">All</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
           </div>
+          <div class="filter-group">
+            <span class="filter-label">Sort By:</span>
+            <select class="filter-select" id="sort-filter">
+              <option value="due_date">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
           <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" class="search-input" placeholder="Search tasks...">
+            <input type="text" class="search-input" id="task-search" placeholder="Search tasks...">
           </div>
         </div>
-        <div class="task-list">
-          <div class="task-item">
-            <div>
-              <div class="task-title">Prepare client presentation</div>
-              <div class="task-meta">
-                <span>Due: April 20</span>
-                <span class="badge badge-pending">Pending</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="task-actions">
-              <button class="btn btn-primary">Start</button>
-            </div>
-          </div>
+        <div class="task-list" id="all-tasks-container">
+          <div class="loading">Loading tasks...</div>
         </div>
+        <div class="pagination" id="tasks-pagination"></div>
       </div>
 
     </div>
+
+    <!-- Debug Panel (hidden by default) -->
+    <div id="debug-panel" style="display: none; position: fixed; bottom: 0; right: 0; background: #f8f9fa; border: 1px solid #ddd; padding: 15px; max-width: 500px; max-height: 300px; overflow: auto; z-index: 1000;">
+      <h3>Debug Information</h3>
+      <div id="debug-content"></div>
+      <div style="margin-top: 15px;">
+        <button onclick="testApiEndpoint()">Test API Directly</button>
+        <button onclick="document.getElementById('debug-panel').style.display='none';">Close</button>
+      </div>
+    </div>
+    <button onclick="document.getElementById('debug-panel').style.display='block';" style="position: fixed; bottom: 10px; right: 10px; z-index: 999;">Debug</button>
   </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get access token from localStorage
+      const token = localStorage.getItem('access_token');
+
+      if (!token) {
+        window.location.href = '/login/';
+        return;
+      }
+
+      // Fetch dashboard data
+      fetchDashboardData();
+
+      // Set up event listeners
+      document.getElementById('status-filter').addEventListener('change', filterTasks);
+      document.getElementById('priority-filter').addEventListener('change', filterTasks);
+      document.getElementById('sort-filter').addEventListener('change', filterTasks);
+      document.getElementById('task-search').addEventListener('input', filterTasks);
+      document.getElementById('refresh-metrics').addEventListener('click', fetchDashboardData);
+
+      // Calendar navigation
+      document.getElementById('prev-month').addEventListener('click', () => navigateCalendar(-1));
+      document.getElementById('next-month').addEventListener('click', () => navigateCalendar(1));
+    });
+
+    // Current calendar state
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let calendarData = {};
+
+    async function fetchDashboardData() {
+      try {
+        console.log('Fetching dashboard data...');
+        console.log('Access token:', localStorage.getItem('access_token') ? 'Present (hidden for security)' : 'Missing');
+        console.log('CSRF token:', getCsrfToken() ? 'Present (hidden for security)' : 'Missing');
+
+        const response = await fetch('/api/employee/dashboard/', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'X-CSRFToken': getCsrfToken()
+          }
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries([...response.headers]));
+
+        // Add to debug panel
+        addDebugInfo('Response Status', response.status);
+        addDebugInfo('Response Headers', Object.fromEntries([...response.headers]));
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            console.error('Unauthorized: Redirecting to login');
+            // Unauthorized, redirect to login
+            window.location.href = '/login/';
+            return;
+          }
+
+          // Try to get error details from response
+          let errorDetails = 'Unknown error';
+          try {
+            const errorData = await response.json();
+            errorDetails = JSON.stringify(errorData);
+          } catch (e) {
+            errorDetails = await response.text();
+          }
+
+          console.error('API Error:', response.status, errorDetails);
+          addDebugInfo('API Error', { status: response.status, details: errorDetails });
+          throw new Error(`Failed to fetch dashboard data: ${response.status} ${errorDetails}`);
+        }
+
+        const data = await response.json();
+        console.log('Dashboard data received:', data);
+
+        // Update user info
+        updateUserInfo(data);
+
+        // Update dashboard components
+        updateMetrics(data.metrics);
+        renderPriorityTasks(data.priority_tasks);
+        renderActivities(data.recent_activities);
+        calendarData = data.calendar_tasks;
+        renderCalendar(currentMonth, currentYear);
+        renderAllTasks(data.priority_tasks.concat(data.recent_progress ? data.recent_progress.map(p => p.task) : []));
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        addDebugInfo('Fetch Error', { message: error.message, stack: error.stack });
+        showError(`Failed to load dashboard data: ${error.message}`);
+
+        // Use fallback data for testing
+        console.log('Using fallback data for testing');
+        const fallbackData = {
+          metrics: {
+            total: 12,
+            pending: 4,
+            in_progress: 5,
+            completed: 3,
+            overdue: 2,
+            due_today: 1,
+            due_this_week: 3,
+            completion_rate: 25
+          },
+          priority_tasks: [
+            {
+              id: 1,
+              title: 'Complete project documentation',
+              status: 'in_progress',
+              priority: 'high',
+              due_date: '2023-12-15',
+              progress: 60,
+              is_overdue: true
+            },
+            {
+              id: 2,
+              title: 'Prepare client presentation',
+              status: 'pending',
+              priority: 'urgent',
+              due_date: '2023-12-18',
+              progress: 0,
+              is_overdue: false
+            }
+          ],
+          recent_activities: [
+            {
+              id: 1,
+              description: 'You updated progress on "Complete project documentation" to 60%',
+              created_at: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+            },
+            {
+              id: 2,
+              description: 'You were assigned "Prepare client presentation"',
+              created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+            }
+          ],
+          recent_progress: [],
+          calendar_tasks: {
+            '2023-12-15': [{ id: 1, title: 'Complete project documentation' }],
+            '2023-12-18': [{ id: 2, title: 'Prepare client presentation' }]
+          }
+        };
+
+        // Update dashboard with fallback data
+        updateUserInfo(fallbackData);
+        updateMetrics(fallbackData.metrics);
+        renderPriorityTasks(fallbackData.priority_tasks);
+        renderActivities(fallbackData.recent_activities);
+        calendarData = fallbackData.calendar_tasks;
+        renderCalendar(currentMonth, currentYear);
+        renderAllTasks(fallbackData.priority_tasks);
+      }
+    }
+
+    function updateUserInfo(data) {
+      // This would be populated from the user data in the response
+      // For now, we'll use placeholder data
+      const user = {
+        first_name: 'Employee',
+        last_name: 'User',
+        initials: 'EU'
+      };
+
+      document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
+      document.getElementById('user-avatar').textContent = user.initials;
+    }
+
+    function updateMetrics(metrics) {
+      document.getElementById('total-tasks').textContent = metrics.total;
+      document.getElementById('in-progress-tasks').textContent = metrics.in_progress;
+      document.getElementById('completed-tasks').textContent = metrics.completed;
+      document.getElementById('overdue-tasks').textContent = metrics.overdue;
+
+      // Update completion rate
+      const completionRate = Math.round(metrics.completion_rate);
+      document.getElementById('completion-rate-fill').style.width = `${completionRate}%`;
+      document.getElementById('completion-rate-text').textContent = `${completionRate}%`;
+    }
+
+    function renderPriorityTasks(tasks) {
+      const container = document.getElementById('priority-tasks-container');
+
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = '<div class="empty-state">No priority tasks</div>';
+        return;
+      }
+
+      const tasksHtml = tasks.map(task => {
+        let statusClass = '';
+        switch (task.status) {
+          case 'pending': statusClass = 'badge-pending'; break;
+          case 'in_progress': statusClass = 'badge-progress'; break;
+          case 'completed': statusClass = 'badge-completed'; break;
+        }
+
+        return `
+          <div class="task-item">
+            <div>
+              <div class="task-title">${task.title}</div>
+              <div class="task-meta">
+                <span>Due: ${formatDate(task.due_date)}</span>
+                <span class="badge ${statusClass}">${task.status.replace('_', ' ')}</span>
+                ${task.is_overdue ? '<span class="badge badge-overdue">Overdue</span>' : ''}
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+              </div>
+            </div>
+            <div class="task-actions">
+              <a href="/tasks/${task.id}/" class="btn btn-primary">View</a>
+              ${task.status !== 'completed' ? `<button class="btn btn-primary update-task" data-task-id="${task.id}">Update</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = tasksHtml;
+
+      // Add event listeners to update buttons
+      container.querySelectorAll('.update-task').forEach(button => {
+        button.addEventListener('click', () => openUpdateModal(button.dataset.taskId));
+      });
+    }
+
+    function renderActivities(activities) {
+      const container = document.getElementById('activity-container');
+
+      if (!activities || activities.length === 0) {
+        container.innerHTML = '<div class="empty-state">No recent activities</div>';
+        return;
+      }
+
+      const activitiesHtml = activities.map(activity => {
+        return `
+          <div class="activity-item">
+            <div>${activity.description}</div>
+            <div class="activity-time">${formatTimeAgo(activity.created_at)}</div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = activitiesHtml;
+    }
+
+    function renderCalendar(month, year) {
+      const container = document.getElementById('calendar-container');
+
+      // Update current month display
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      document.getElementById('current-month').textContent = `${monthNames[month]} ${year}`;
+
+      // Generate calendar HTML
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1).getDay();
+
+      let html = `
+        <div class="calendar-grid">
+          <div class="calendar-day-header">Sun</div>
+          <div class="calendar-day-header">Mon</div>
+          <div class="calendar-day-header">Tue</div>
+          <div class="calendar-day-header">Wed</div>
+          <div class="calendar-day-header">Thu</div>
+          <div class="calendar-day-header">Fri</div>
+          <div class="calendar-day-header">Sat</div>
+      `;
+
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < firstDay; i++) {
+        html += '<div class="calendar-day empty"></div>';
+      }
+
+      // Add days with tasks
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasTasks = calendarData[dateStr] && calendarData[dateStr].length > 0;
+        const taskCount = hasTasks ? calendarData[dateStr].length : 0;
+        const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+
+        html += `
+          <div class="calendar-day ${hasTasks ? 'has-tasks' : ''} ${isToday ? 'today' : ''}">
+            <div class="day-number">${day}</div>
+            ${hasTasks ? `<div class="task-count">${taskCount}</div>` : ''}
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function navigateCalendar(direction) {
+      currentMonth += direction;
+
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+
+      renderCalendar(currentMonth, currentYear);
+    }
+
+    function renderAllTasks(tasks) {
+      const container = document.getElementById('all-tasks-container');
+
+      if (!tasks || tasks.length === 0) {
+        container.innerHTML = '<div class="empty-state">No tasks found</div>';
+        return;
+      }
+
+      // Remove duplicates by ID
+      const uniqueTasks = [];
+      const taskIds = new Set();
+
+      tasks.forEach(task => {
+        if (!taskIds.has(task.id)) {
+          taskIds.add(task.id);
+          uniqueTasks.push(task);
+        }
+      });
+
+      // Sort tasks by due date
+      uniqueTasks.sort((a, b) => {
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      });
+
+      const tasksHtml = uniqueTasks.map(task => {
+        let statusClass = '';
+        switch (task.status) {
+          case 'pending': statusClass = 'badge-pending'; break;
+          case 'in_progress': statusClass = 'badge-progress'; break;
+          case 'completed': statusClass = 'badge-completed'; break;
+        }
+
+        return `
+          <div class="task-item" data-status="${task.status}" data-priority="${task.priority}">
+            <div>
+              <div class="task-title">${task.title}</div>
+              <div class="task-meta">
+                <span>Due: ${formatDate(task.due_date)}</span>
+                <span class="badge ${statusClass}">${task.status.replace('_', ' ')}</span>
+                ${task.is_overdue ? '<span class="badge badge-overdue">Overdue</span>' : ''}
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+              </div>
+            </div>
+            <div class="task-actions">
+              <a href="/tasks/${task.id}/" class="btn btn-primary">View</a>
+              ${task.status !== 'completed' ? `<button class="btn btn-primary update-task" data-task-id="${task.id}">Update</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = tasksHtml;
+
+      // Add event listeners to update buttons
+      container.querySelectorAll('.update-task').forEach(button => {
+        button.addEventListener('click', () => openUpdateModal(button.dataset.taskId));
+      });
+    }
+
+    function filterTasks() {
+      const statusFilter = document.getElementById('status-filter').value;
+      const priorityFilter = document.getElementById('priority-filter').value;
+      const sortBy = document.getElementById('sort-filter').value;
+      const searchTerm = document.getElementById('task-search').value.toLowerCase();
+
+      const taskItems = document.querySelectorAll('#all-tasks-container .task-item');
+
+      taskItems.forEach(item => {
+        const status = item.dataset.status;
+        const priority = item.dataset.priority;
+        const title = item.querySelector('.task-title').textContent.toLowerCase();
+
+        const statusMatch = statusFilter === 'all' || status === statusFilter;
+        const priorityMatch = priorityFilter === 'all' || priority === priorityFilter;
+        const searchMatch = !searchTerm || title.includes(searchTerm);
+
+        if (statusMatch && priorityMatch && searchMatch) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // Sort tasks based on selected sort option
+      const taskList = document.getElementById('all-tasks-container');
+      const tasks = Array.from(taskList.querySelectorAll('.task-item'));
+
+      tasks.sort((a, b) => {
+        if (sortBy === 'priority') {
+          const priorityOrder = { 'urgent': 0, 'high': 1, 'medium': 2, 'low': 3 };
+          return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
+        } else if (sortBy === 'status') {
+          const statusOrder = { 'pending': 0, 'in_progress': 1, 'completed': 2 };
+          return statusOrder[a.dataset.status] - statusOrder[b.dataset.status];
+        } else {
+          // Default sort by due date is already applied when rendering
+          return 0;
+        }
+      });
+
+      tasks.forEach(task => taskList.appendChild(task));
+    }
+
+    function openUpdateModal(taskId) {
+      // Implementation for task update modal
+      // This would open a modal dialog to update task progress
+      alert(`Update task ${taskId} - This would open a modal in the full implementation`);
+    }
+
+    function showError(message) {
+      // Display error message to user
+      alert(message);
+    }
+
+    // Debug functions
+    function addDebugInfo(label, data) {
+      const debugContent = document.getElementById('debug-content');
+      const debugItem = document.createElement('div');
+      debugItem.innerHTML = `<strong>${label}:</strong> <pre>${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}</pre>`;
+      debugContent.appendChild(debugItem);
+    }
+
+    // Add initial debug info
+    document.addEventListener('DOMContentLoaded', function() {
+      addDebugInfo('API URL', '/api/employee/dashboard/');
+      addDebugInfo('Access Token Present', localStorage.getItem('access_token') ? 'Yes' : 'No');
+      addDebugInfo('CSRF Token Present', getCsrfToken() ? 'Yes' : 'No');
+
+      // Add URL info
+      addDebugInfo('Current URL', window.location.href);
+      addDebugInfo('Base URL', window.location.origin);
+
+      // Add browser info
+      addDebugInfo('User Agent', navigator.userAgent);
+    });
+
+    // Function to test API endpoint directly
+    async function testApiEndpoint() {
+      addDebugInfo('API Test', 'Testing API endpoint directly...');
+
+      try {
+        // Test with fetch API
+        const response = await fetch('/api/employee/dashboard/', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'X-CSRFToken': getCsrfToken()
+          }
+        });
+
+        addDebugInfo('API Test Status', response.status);
+        addDebugInfo('API Test Headers', Object.fromEntries([...response.headers]));
+
+        if (response.ok) {
+          const data = await response.json();
+          addDebugInfo('API Test Response', data);
+        } else {
+          let errorText = await response.text();
+          addDebugInfo('API Test Error', errorText);
+        }
+      } catch (error) {
+        addDebugInfo('API Test Exception', error.message);
+      }
+
+      // Also try with XMLHttpRequest for comparison
+      addDebugInfo('API Test (XHR)', 'Testing with XMLHttpRequest...');
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/employee/dashboard/');
+      xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('access_token')}`);
+      xhr.setRequestHeader('X-CSRFToken', getCsrfToken());
+
+      xhr.onload = function() {
+        addDebugInfo('XHR Status', xhr.status);
+        addDebugInfo('XHR Response', xhr.responseText.substring(0, 500) + '...');
+      };
+
+      xhr.onerror = function() {
+        addDebugInfo('XHR Error', 'Request failed');
+      };
+
+      xhr.send();
+    }
+  </script>
 </body>
 </html>
-
-
-
-
-
-
 

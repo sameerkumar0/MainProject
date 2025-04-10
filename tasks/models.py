@@ -7,6 +7,7 @@ User = get_user_model()
 class Task(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('assigned', 'Assigned'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed')
     ]
@@ -20,7 +21,6 @@ class Task(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
-    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks', limit_choices_to={'role': 'Employee'})
     assigned_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks', limit_choices_to={'role': 'Manager'})
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
@@ -29,6 +29,11 @@ class Task(models.Model):
     due_date = models.DateTimeField(null=True, blank=True)
     progress = models.IntegerField(default=0, help_text="Progress percentage (0-100)")
     assigned_at = models.DateTimeField(auto_now_add=True)  # Added for dashboard history tracking
+
+    # New fields for dashboard
+    start_date = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    tags = models.CharField(max_length=200, blank=True, help_text="Comma-separated tags")
 
     def __str__(self):
         return self.title
@@ -43,6 +48,44 @@ class Task(models.Model):
             return None
         delta = self.due_date - timezone.now()
         return max(0, delta.days)
+
+    def get_time_remaining(self):
+        """Returns time remaining until due date in a human-readable format."""
+        if not self.due_date:
+            return "No deadline"
+        if self.status == 'completed':
+            return "Completed"
+
+        now = timezone.now()
+        if now > self.due_date:
+            return "Overdue"
+
+        delta = self.due_date - now
+        days = delta.days
+        hours = delta.seconds // 3600
+
+        if days > 0:
+            return f"{days} days, {hours} hours"
+        else:
+            return f"{hours} hours"
+
+    def save(self, *args, **kwargs):
+        # Set start_date when status changes to in_progress
+        if self.status == 'in_progress' and not self.start_date:
+            self.start_date = timezone.now()
+
+        # Set completed_at when status changes to completed
+        if self.status == 'completed' and not self.completed_at:
+            self.completed_at = timezone.now()
+            # Ensure progress is 100% when completed
+            self.progress = 100
+
+        # Reset completed_at if status changes from completed
+        elif self.status != 'completed' and self.completed_at:
+            self.completed_at = None
+
+        super().save(*args, **kwargs)
+
 
 class TaskAssignment(models.Model):
     """
@@ -69,6 +112,10 @@ class TaskAssignment(models.Model):
         self.accepted_at = timezone.now()
         self.save()
 
+        # Update task status to 'assigned' once accepted
+        self.task.status = 'assigned'
+        self.task.save()
+
     def complete_assignment(self, hours_spent):
         self.actual_hours = hours_spent
         self.completed_at = timezone.now()
@@ -78,6 +125,7 @@ class TaskAssignment(models.Model):
         self.task.status = 'completed'
         self.task.progress = 100
         self.task.save()
+
 
 class TaskProgress(models.Model):
     """
@@ -89,6 +137,20 @@ class TaskProgress(models.Model):
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # New fields for dashboard
+    time_spent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours spent on this update"
+    )
+    status_change = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Status change if any (e.g., 'pending to in_progress')"
+    )
+
     class Meta:
         ordering = ['-created_at']
 
@@ -96,6 +158,21 @@ class TaskProgress(models.Model):
         return f"Progress update for {self.task.title}: {self.progress_percentage}%"
 
     def save(self, *args, **kwargs):
+        # Track status change if task status will change
+        if self.pk is None:  # New progress update
+            old_status = self.task.status
+            new_status = None
+
+            # Determine new status based on progress
+            if self.progress_percentage == 100:
+                new_status = 'completed'
+            elif self.progress_percentage > 0:
+                new_status = 'in_progress'
+
+            # Record status change if different
+            if new_status and old_status != new_status:
+                self.status_change = f"{old_status} to {new_status}"
+
         super().save(*args, **kwargs)
 
         # Update the task's progress field
@@ -109,3 +186,59 @@ class TaskProgress(models.Model):
             self.task.status = 'in_progress'
 
         self.task.save()
+
+
+class Notification(models.Model):
+    """
+    Model for storing user notifications for the dashboard.
+    """
+    NOTIFICATION_TYPES = [
+        ('task_assigned', 'Task Assigned'),
+        ('task_updated', 'Task Updated'),
+        ('comment_added', 'Comment Added'),
+        ('deadline_approaching', 'Deadline Approaching'),
+        ('task_overdue', 'Task Overdue'),
+        ('task_completed', 'Task Completed'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    related_task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.notification_type}: {self.title}"
+
+
+class UserActivity(models.Model):
+    """
+    Model for tracking user activity for the dashboard.
+    """
+    ACTIVITY_TYPES = [
+        ('login', 'User Login'),
+        ('task_created', 'Task Created'),
+        ('task_assigned', 'Task Assigned'),
+        ('task_updated', 'Task Updated'),
+        ('progress_updated', 'Progress Updated'),
+        ('comment_added', 'Comment Added'),
+        ('task_completed', 'Task Completed'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
+    activity_type = models.CharField(max_length=30, choices=ACTIVITY_TYPES)
+    description = models.TextField()
+    related_task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'User activities'
+
+    def __str__(self):
+        return f"{self.user.username}: {self.activity_type}"

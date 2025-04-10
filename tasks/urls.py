@@ -2,8 +2,11 @@ from django.urls import path
 from .views import (
     TaskListView, TaskCreateView, TaskUpdateStatusView, TaskDetailView,
     TaskAssignmentListView, TaskProgressListCreateView,
-    task_create, task_list,task_assignment_page
-)
+    task_create, task_list, task_assignment_page, employee_dashboard,
+    EmployeeDashboardAPIView,
+    ManagerDashboardAPIView,
+    NotificationListView, NotificationMarkReadView,
+    UserActivityListView,)
 
 urlpatterns = [
     # Task views
@@ -18,6 +21,17 @@ urlpatterns = [
 
     # Task progress views
     path('tasks/<int:task_id>/progress/', TaskProgressListCreateView.as_view(), name='task-progress-list'),  # List/create progress
+
+    # Dashboard API views
+    path('employee/dashboard/', EmployeeDashboardAPIView.as_view(), name='employee-dashboard-api'),  # Employee dashboard API
+    path('manager/dashboard/', ManagerDashboardAPIView.as_view(), name='manager-dashboard-api'),  # Manager dashboard API
+
+    # Dashboard utility API views
+    path('notifications/', NotificationListView.as_view(), name='notification-list'),  # Notifications list/create
+    path('notifications/<int:pk>/read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),  # Mark notification as read
+    path('activities/', UserActivityListView.as_view(), name='user-activity-list'),  # User activities list
+    # Dashboard template views
+    path('employee_dashboard/', employee_dashboard, name='employee-dashboard-legacy'),  # Legacy employee dashboard
 
     # Template views
     path('task_list/', task_list, name='task_list'),  # Template view
