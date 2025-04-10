@@ -6,12 +6,14 @@ from .views import (
     EmployeeDashboardAPIView,
     ManagerDashboardAPIView,
     NotificationListView, NotificationMarkReadView,
-    UserActivityListView,)
-
+    UserActivityListView,task_detail
+)
+from users.urls import *
 urlpatterns = [
     # Task views
     path('tasks/', TaskListView.as_view(), name='task-list'),  # List all tasks
     path('tasks/<int:pk>/', TaskDetailView.as_view(), name='task-detail'),  # Get task details
+    path('tasks/<int:pk>/detail/', task_detail, name='task-detail-page'),  # Template view
     path('tasks/create/', TaskCreateView.as_view(), name='task-create'),  # Create a task
     path('tasks/update/<int:pk>/', TaskUpdateStatusView.as_view(), name='task-update'),  # Update task status
 

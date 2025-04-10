@@ -42,8 +42,8 @@ urlpatterns = [
     path('list_employee/',EmployeeListView.as_view(),name='emaployee_list'),
     path('employees/',list_employee,name='list_employees'),
     path('employee-tasks/', lambda request: render(request, 'employee_tasks.html'), name='employee-tasks'),
-    path('employee/profile/<str:username>/',EmployeeProfileView.as_view(),name='employee-profile'),
-    path('employee_profile/',employee_profile,name='employee_profile'),
+    path('employee/profile/<int:pk>/',EmployeeProfileView.as_view(),name='employee-profile'),
+    path('employee_profile/<int:pk>/',employee_profile,name='employee_profile'),
 
     # Logout URLs
     path('logout/', LogoutView.as_view(), name='logout'),

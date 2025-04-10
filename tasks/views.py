@@ -132,6 +132,9 @@ class TaskDetailView(generics.RetrieveAPIView):
         if user.role == 'Manager':
             return Task.objects.all()
         return Task.objects.filter(assigned_to=user)
+    
+def task_detail(request, pk):
+    return render(request,'tasks/task_view.html')
 
 class TaskUpdateStatusView(generics.UpdateAPIView):
     """

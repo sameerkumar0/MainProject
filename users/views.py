@@ -249,7 +249,7 @@ class ManagerDashboardView(APIView):
             "phone_number": user.phone_number,
         }
 
-        # Get all employees 
+        # Get all employees
         employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE)
         employees_data = []
 
@@ -361,17 +361,27 @@ def list_employee(request):
 
 
 class EmployeeProfileView(APIView):
-    permission_classes = [permissions.IsAuthenticated,IsManager]
+    permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, pk=None):
+        # If pk is provided, get that specific employee's profile
+        if pk:
+            try:
+                employee = CustomUser.objects.get(pk=pk, role=UserRoles.EMPLOYEE)
+                serializer = EmployeeSerializer(employee)
+                return Response(serializer.data)
+            except CustomUser.DoesNotExist:
+                return Response({"detail": "Employee not found."}, status=404)
+
+        # Otherwise, get the current user's profile
         user = request.user
 
         # Check if the user is an employee (optional filter)
-        if user.role != 'EMPLOYEE':
+        if user.role != UserRoles.EMPLOYEE:
             return Response({"detail": "You are not authorized to view this profile."}, status=403)
 
         serializer = EmployeeSerializer(user)
-        return Response(serializer.data) 
+        return Response(serializer.data)
 
 def employee_profile(request):
     return render(request,'employee_profile.html')
