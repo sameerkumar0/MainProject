@@ -147,6 +147,7 @@ class EmployeeDashboardSerializer(serializers.Serializer):
     recent_progress = TaskProgressSerializer(many=True)
     calendar_tasks = serializers.DictField(child=CalendarTaskSerializer(many=True))
     recent_notifications = NotificationSerializer(many=True)
+    all_tasks = TaskSerializer(many=True, required=False)  # Added all tasks field
 
 
 class EmployeePerformanceSerializer(serializers.Serializer):

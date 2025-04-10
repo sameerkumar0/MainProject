@@ -132,7 +132,7 @@ class TaskDetailView(generics.RetrieveAPIView):
         if user.role == 'Manager':
             return Task.objects.all()
         return Task.objects.filter(assigned_to=user)
-    
+
 def task_detail(request, pk):
     return render(request,'tasks/task_view.html')
 
@@ -405,6 +405,11 @@ class EmployeeDashboardAPIView(APIView):
         from users.serializers import EmployeeSerializer
         employee_data = EmployeeSerializer(employee).data
 
+        # Get all tasks assigned to the employee
+        from .serializers import TaskSerializer
+        all_tasks = tasks.order_by('-due_date')
+        all_tasks_serialized = TaskSerializer(all_tasks, many=True).data
+
         # Prepare response data
         dashboard_data = {
             'user': employee_data,
@@ -413,7 +418,8 @@ class EmployeeDashboardAPIView(APIView):
             'recent_activities': user_activities,
             'recent_progress': recent_progress,
             'calendar_tasks': calendar_tasks,
-            'recent_notifications': recent_notifications
+            'recent_notifications': recent_notifications,
+            'all_tasks': all_tasks_serialized  # Add all tasks to the response
         }
 
         # Serialize the data
