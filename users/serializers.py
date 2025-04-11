@@ -64,7 +64,7 @@ class ManagerRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "username", "email", "password", "phone_number","profile_photo "]
+        fields = ["first_name", "last_name", "username", "email", "password", "phone_number","profile_photo"]
 
     def create(self, validated_data):
         validated_data["password"] = make_password(validated_data["password"])

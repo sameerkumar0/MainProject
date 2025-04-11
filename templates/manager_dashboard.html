@@ -110,17 +110,255 @@
       font-size: 0.9rem;
     }
 
-    .chart-placeholder {
-      background: repeating-linear-gradient(135deg, #3b82f6, #3b82f6 10px, #60a5fa 10px, #60a5fa 20px);
-      height: 180px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-    }
+
 
     @media (max-width: 768px) {
       .dashboard-wrapper {
         grid-template-columns: 1fr;
       }
+    }
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background-color: var(--card-bg);
+      width: 90%;
+      max-width: 600px;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      color: var(--subtext-color);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .close-modal:hover {
+      color: var(--text-color);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      background-color: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-color);
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #2563eb;
+    }
+
+    .btn-block {
+      display: block;
+      width: 100%;
+    }
+
+    .task-list, .employee-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+
+    .task-item, .employee-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .task-item:last-child, .employee-item:last-child {
+      border-bottom: none;
+    }
+
+    .task-item:hover, .employee-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .task-item.selected, .employee-item.selected {
+      background-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .task-info, .employee-info {
+      flex: 1;
+    }
+
+    .task-title, .employee-name {
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .task-meta, .employee-email {
+      font-size: 0.8rem;
+      color: var(--subtext-color);
+    }
+
+    .employee-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      margin-right: 12px;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+
+    .priority-low {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: var(--green-color);
+    }
+
+    .priority-medium {
+      background-color: rgba(59, 130, 246, 0.2);
+      color: var(--primary-color);
+    }
+
+    .priority-high {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .priority-urgent {
+      background-color: rgba(239, 68, 68, 0.2);
+      color: var(--red-color);
+    }
+
+    .alert {
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .alert-success {
+      background-color: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--green-color);
+      color: var(--green-color);
+    }
+
+    .alert-error {
+      background-color: rgba(239, 68, 68, 0.2);
+      border: 1px solid var(--red-color);
+      color: var(--red-color);
+    }
+
+    .task-details {
+      background-color: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .task-detail-row {
+      margin-bottom: 10px;
+    }
+
+    .task-detail-label {
+      font-weight: 500;
+      margin-right: 8px;
+      color: var(--subtext-color);
+    }
+
+    .task-detail-value {
+      color: var(--text-color);
     }
   </style>
 </head>
@@ -136,6 +374,46 @@
         + Assign Task
       </button>
       <div id="managerInfo" style="display: flex; align-items: center; gap: 10px;">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Task Assignment Modal -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Assign Existing Task</h3>
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+      </div>
+
+      <div class="alert alert-success" id="successAlert">Task assigned successfully!</div>
+      <div class="alert alert-error" id="errorAlert">Error assigning task. Please try again.</div>
+
+      <form id="assignTaskForm">
+        <div class="form-group">
+          <label class="form-label" for="taskSelect">Select Task*</label>
+          <select class="form-control" id="taskSelect" required>
+            <option value="" disabled selected>-- Select a task --</option>
+            <!-- Tasks will be loaded here -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="employeeSelect">Assign To*</label>
+          <select class="form-control" id="employeeSelect" required>
+            <option value="" disabled selected>-- Select an employee --</option>
+            <!-- Employees will be loaded here -->
+          </select>
+        </div>
+
+        <div class="form-group" id="taskDetailsContainer" style="display: none;">
+          <label class="form-label">Task Details</label>
+          <div class="task-details" id="taskDetails">
+            <!-- Task details will be shown here -->
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Assign Task</button>
+      </form>
     </div>
   </div>
 
@@ -159,10 +437,6 @@
 
     <!-- Right Column -->
     <div>
-      <div class="card">
-        <h2 class="section-title">Task Progress</h2>
-        <div id="taskChart" class="chart-placeholder"></div>
-      </div>
       <div class="card">
         <h2 class="section-title">Task Assignment History</h2>
         <ul id="assignmentHistory" class="assignment-history"></ul>
@@ -189,51 +463,32 @@
   <script>
     document.addEventListener("DOMContentLoaded", fetchDashboardData);
 
-    function openAssignModal() {
-      document.getElementById("assignModal").style.display = "flex";
-    }
+    // Store dashboard data globally for use in the modal
+    window.dashboardData = null;
 
-    function closeAssignModal() {
-      document.getElementById("assignModal").style.display = "none";
-    }
+    // Initialize the task assignment form
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('assignTaskForm').addEventListener('submit', assignTask);
 
-    async function submitAssignTask() {
-      const email = document.getElementById("assignEmail").value;
-      const title = document.getElementById("assignTitle").value;
-      const due = document.getElementById("assignDue").value;
-
-      const accessToken = localStorage.getItem("access_token");
-
-      const response = await fetch("http://127.0.0.1:8000/api/tasks/assign/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          employee_email: email,
-          title: title,
-          due_date: due
-        })
+      // Close modal when clicking outside of it
+      document.getElementById('taskModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+          closeModal();
+        }
       });
-
-      if (response.ok) {
-        alert("Task assigned successfully!");
-        closeAssignModal();
-        fetchDashboardData(); // refresh data
-      } else {
-        alert("Failed to assign task.");
-      }
-    }
+    });
 
     async function fetchDashboardData() {
       const accessToken = localStorage.getItem("access_token");
 
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/users/manager/dashboard/", {
+        const response = await fetch("/api/manager/dashboard/", {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         const data = await response.json();
+
+        // Store data globally for use in the modal
+        window.dashboardData = data;
 
         renderManager(data.manager);
         renderEmployees(data.employees);
@@ -243,6 +498,27 @@
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
       }
+    }
+
+    // Modal functions
+    function openAssignModal() {
+      // Clear form
+      document.getElementById('assignTaskForm').reset();
+      document.getElementById('selectedTask').value = '';
+      document.getElementById('selectedEmployee').value = '';
+      document.getElementById('successAlert').style.display = 'none';
+      document.getElementById('errorAlert').style.display = 'none';
+
+      // Load tasks and employees for the modal
+      loadUnassignedTasks();
+      loadModalEmployees();
+
+      // Show modal
+      document.getElementById('taskModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('taskModal').classList.remove('active');
     }
 
     function renderManager(manager) {
@@ -296,6 +572,305 @@
       history.forEach(h => {
         list.innerHTML += `<li class="history-item">${h.task} assigned to ${h.employee} on ${h.assigned_at} - Status: ${h.status}</li>`;
       });
+    }
+
+
+
+    // Store tasks globally for reference
+    window.tasksList = [];
+
+    async function loadUnassignedTasks() {
+      const taskSelect = document.getElementById('taskSelect');
+
+      try {
+        // Fetch unassigned tasks
+        const response = await fetch('/api/tasks/?status=pending', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch tasks');
+        }
+
+        const tasks = await response.json();
+
+        // Filter for unassigned tasks (tasks without assigned_to)
+        const unassignedTasks = tasks.filter(task => !task.assigned_to);
+
+        // Store tasks globally for reference
+        window.tasksList = unassignedTasks;
+
+        // Clear existing options except the first one
+        while (taskSelect.options.length > 1) {
+          taskSelect.remove(1);
+        }
+
+        // Add tasks to select
+        if (unassignedTasks.length === 0) {
+          const option = document.createElement('option');
+          option.text = 'No unassigned tasks available';
+          option.disabled = true;
+          taskSelect.add(option);
+        } else {
+          unassignedTasks.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.id;
+            option.text = `${task.title} (${task.priority})`;
+            taskSelect.add(option);
+          });
+        }
+
+        // Add change event listener
+        taskSelect.addEventListener('change', showTaskDetails);
+
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        // Clear existing options except the first one
+        while (taskSelect.options.length > 1) {
+          taskSelect.remove(1);
+        }
+
+        const option = document.createElement('option');
+        option.text = 'Error loading tasks';
+        option.disabled = true;
+        taskSelect.add(option);
+      }
+    }
+
+    function showTaskDetails() {
+      const taskId = document.getElementById('taskSelect').value;
+      const detailsContainer = document.getElementById('taskDetailsContainer');
+      const detailsDiv = document.getElementById('taskDetails');
+
+      if (!taskId) {
+        detailsContainer.style.display = 'none';
+        return;
+      }
+
+      // Find the selected task
+      const task = window.tasksList.find(t => t.id == taskId);
+
+      if (!task) {
+        detailsContainer.style.display = 'none';
+        return;
+      }
+
+      // Format dates
+      const createdDate = new Date(task.created_at).toLocaleString();
+      const dueDate = task.due_date ? new Date(task.due_date).toLocaleString() : 'Not set';
+
+      // Build details HTML
+      const detailsHTML = `
+        <div class="task-detail-row">
+          <span class="task-detail-label">Title:</span>
+          <span class="task-detail-value">${task.title}</span>
+        </div>
+        <div class="task-detail-row">
+          <span class="task-detail-label">Description:</span>
+          <span class="task-detail-value">${task.description || 'No description'}</span>
+        </div>
+        <div class="task-detail-row">
+          <span class="task-detail-label">Priority:</span>
+          <span class="task-detail-value">
+            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+          </span>
+        </div>
+        <div class="task-detail-row">
+          <span class="task-detail-label">Created:</span>
+          <span class="task-detail-value">${createdDate}</span>
+        </div>
+        <div class="task-detail-row">
+          <span class="task-detail-label">Due Date:</span>
+          <span class="task-detail-value">${dueDate}</span>
+        </div>
+        ${task.tags ? `
+        <div class="task-detail-row">
+          <span class="task-detail-label">Tags:</span>
+          <span class="task-detail-value">${task.tags}</span>
+        </div>
+        ` : ''}
+      `;
+
+      detailsDiv.innerHTML = detailsHTML;
+      detailsContainer.style.display = 'block';
+    }
+
+    async function loadModalEmployees() {
+      const container = document.getElementById('modalEmployeeList');
+
+      try {
+        // Use the employees data we already have from the dashboard
+        if (window.dashboardData && window.dashboardData.employees) {
+          renderModalEmployees(window.dashboardData.employees);
+          return;
+        }
+
+        // If we don't have the data yet, fetch it
+        const response = await fetch('/api/users/list_employee/', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch employees');
+        }
+
+        const employees = await response.json();
+        renderModalEmployees(employees);
+
+      } catch (error) {
+        console.error('Error loading employees:', error);
+        container.innerHTML = `
+          <div style="padding: 15px; text-align: center; color: var(--red-color);">
+            Failed to load employees. Please try again.
+          </div>
+        `;
+      }
+    }
+
+    function renderModalEmployees(employees) {
+      const container = document.getElementById('modalEmployeeList');
+
+      if (!employees || employees.length === 0) {
+        container.innerHTML = `
+          <div style="padding: 15px; text-align: center; color: var(--subtext-color);">
+            No employees found.
+          </div>
+        `;
+        return;
+      }
+
+      const html = employees.map(emp => {
+        // Get initials for avatar
+        const name = emp.name || `${emp.first_name} ${emp.last_name}`;
+        const initials = name.split(' ')
+          .map(n => n.charAt(0))
+          .join('')
+          .toUpperCase();
+
+        // Get employee ID
+        const id = emp.id;
+
+        return `
+          <div class="employee-item" data-id="${id}" onclick="selectEmployee(this, ${id})">
+            <div class="employee-avatar">${initials}</div>
+            <div class="employee-info">
+              <div class="employee-name">${name}</div>
+              <div class="employee-email">${emp.email}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function selectEmployee(element, employeeId) {
+      // Remove selected class from all employees
+      document.querySelectorAll('.employee-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+
+      // Add selected class to clicked employee
+      element.classList.add('selected');
+
+      // Set the employee ID in the hidden input
+      document.getElementById('selectedEmployee').value = employeeId;
+    }
+
+    async function assignTask(event) {
+      event.preventDefault();
+
+      const taskId = document.getElementById('taskSelect').value;
+      const employeeId = document.getElementById('employeeSelect').value;
+
+      if (!taskId) {
+        showError('Please select a task to assign.');
+        return;
+      }
+
+      if (!employeeId) {
+        showError('Please select an employee to assign the task to.');
+        return;
+      }
+
+      try {
+        // Update the task with the assigned employee
+        const response = await fetch(`/api/tasks/${taskId}/`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            assigned_to: employeeId,
+            status: 'assigned'
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          let errorMessage = 'Failed to assign task.';
+          if (data.non_field_errors) {
+            errorMessage = data.non_field_errors.join(' ');
+          } else if (typeof data === 'object') {
+            errorMessage = Object.entries(data)
+              .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : value}`)
+              .join('\n');
+          }
+          throw new Error(errorMessage);
+        }
+
+        // Show success message
+        showSuccess('Task assigned successfully!');
+
+        // Reset form
+        document.getElementById('assignTaskForm').reset();
+        document.querySelectorAll('.task-item').forEach(item => {
+          item.classList.remove('selected');
+        });
+        document.querySelectorAll('.employee-item').forEach(item => {
+          item.classList.remove('selected');
+        });
+        document.getElementById('selectedTask').value = '';
+        document.getElementById('selectedEmployee').value = '';
+
+        // Refresh task list
+        loadUnassignedTasks();
+
+        // Refresh dashboard data after a short delay
+        setTimeout(() => {
+          fetchDashboardData();
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error assigning task:', error);
+        showError(error.message);
+      }
+    }
+
+    function showSuccess(message) {
+      const alert = document.getElementById('successAlert');
+      alert.textContent = message;
+      alert.style.display = 'block';
+
+      setTimeout(() => {
+        alert.style.display = 'none';
+      }, 5000);
+    }
+
+    function showError(message) {
+      const alert = document.getElementById('errorAlert');
+      alert.textContent = message;
+      alert.style.display = 'block';
+
+      setTimeout(() => {
+        alert.style.display = 'none';
+      }, 5000);
     }
   </script>
 </body>

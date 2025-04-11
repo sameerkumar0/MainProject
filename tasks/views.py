@@ -6,26 +6,17 @@ from django.utils import timezone
 from django.db.models import Q
 from datetime import timedelta
 from .models import Task, TaskAssignment, TaskProgress, Notification, UserActivity
-from .serializers import (
-    TaskSerializer, TaskDetailSerializer, TaskProgressSerializer,
-    NotificationSerializer, UserActivitySerializer,
-    TaskMetricsSerializer, EmployeeDashboardSerializer,
-     ManagerDashboardSerializer
-)
-from .permissions import IsManager, IsEmployee
-from tasks.permissions import IsTaskAssignedToEmployee
+from .serializers import *
+from .permissions import IsManager, IsEmployee,IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
 from django.db import transaction
 from django.shortcuts import render
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from users.models import CustomUser
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import View
 from django.http import HttpResponseForbidden
-
 from rest_framework.permissions import IsAuthenticated
-from .models import Task, User
 
 # Task Creation View (Separate)
 class TaskCreateView(APIView):
@@ -51,19 +42,64 @@ def task_create(request):
 
 # Task Assignment View (Separate)
 class TaskAssignView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsManager]
 
     def post(self, request, *args, **kwargs):
-        data = request.data.copy()
-        data['assigned_by'] = request.user.id  # Automatically set the manager (creator)
+        task_id = request.data.get('task_id')
+        employee_id = request.data.get('employee_id')
 
-        # Pass the request context into the serializer
-        serializer = TaskSerializer(data=data, context={'request': request})
+        if not task_id or not employee_id:
+            return Response({"error": "Both task_id and employee_id are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
-            task = serializer.save(assigned_by=request.user)
-            return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            task = Task.objects.get(id=task_id)
+            employee = User.objects.get(id=employee_id, role='Employee')
+
+            # Check if task is already assigned
+            if TaskAssignment.objects.filter(task=task).exists():
+                return Response({"error": "This task is already assigned"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create task assignment
+            assignment = TaskAssignment.objects.create(
+                task=task,
+                employee=employee
+            )
+
+            # Update task status
+            task.status = 'assigned'
+            task.save()
+
+            # Create notification for the employee
+            Notification.objects.create(
+                user=employee,
+                notification_type='task_assigned',
+                title='New Task Assigned',
+                message=f'You have been assigned a new task: {task.title}',
+                related_task=task
+            )
+
+            # Create activity record
+            UserActivity.objects.create(
+                user=request.user,
+                activity_type='task_assigned',
+                description=f'Assigned task "{task.title}" to {employee.username}',
+                related_task=task
+            )
+
+            return Response({
+                "success": True,
+                "message": f"Task '{task.title}' assigned to {employee.username}",
+                "task_id": task.id,
+                "employee_id": employee.id,
+                "assigned_at": assignment.assigned_at
+            }, status=status.HTTP_201_CREATED)
+
+        except Task.DoesNotExist:
+            return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+        except User.DoesNotExist:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -86,7 +122,8 @@ class TaskListView(generics.ListAPIView):
         if user.role == 'Manager':
             queryset = Task.objects.all()  # Managers see all tasks
         else:
-            queryset = Task.objects.filter(assigned_to=user)
+            # Employees see only tasks assigned to them via TaskAssignment
+            queryset = Task.objects.filter(assignments__employee=user)
 
         # Filter by status if provided
         status_param = self.request.query_params.get('status', None)
@@ -131,10 +168,12 @@ class TaskDetailView(generics.RetrieveAPIView):
         user = self.request.user
         if user.role == 'Manager':
             return Task.objects.all()
-        return Task.objects.filter(assigned_to=user)
+        # For employees, return tasks assigned to them via TaskAssignment
+        return Task.objects.filter(assignments__employee=user, assignments__completed_at__isnull=True)
 
 def task_detail(request, pk):
     return render(request,'tasks/task_view.html')
+
 
 class TaskUpdateStatusView(generics.UpdateAPIView):
     """
@@ -148,8 +187,15 @@ class TaskUpdateStatusView(generics.UpdateAPIView):
         try:
             task = get_object_or_404(Task, pk=kwargs['pk'])
 
-            if task.assigned_to != request.user:
-                return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            # Check if the task is assigned to the current user
+            assignment = TaskAssignment.objects.filter(
+                task=task,
+                employee=request.user,
+                completed_at__isnull=True
+            ).first()
+
+            if not assignment:
+                return Response({'error': 'Permission denied. This task is not assigned to you.'}, status=status.HTTP_403_FORBIDDEN)
 
             new_status = request.data.get('status')
             if new_status not in ['pending', 'in_progress', 'completed']:
@@ -226,47 +272,6 @@ class TaskUpdateStatusView(generics.UpdateAPIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class TaskAssignmentListView(generics.ListCreateAPIView):
-    """
-    List all task assignments or create a new one.
-    """
-    permission_classes = [permissions.IsAuthenticated,IsManager]
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return TaskAssignmentCreateSerializer
-        return TaskAssignmentCreateSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'Manager':
-            return TaskAssignment.objects.filter(task__assigned_by=user)
-        return TaskAssignment.objects.filter(employee=user)
-
-    def perform_create(self, serializer):
-        task = serializer.validated_data.get('task')
-        if self.request.user.role != 'Manager' or task.assigned_by != self.request.user:
-            raise PermissionDenied("Only the assigning manager can create assignments for their tasks.")
-        serializer.save()
-
-@login_required
-def task_assignment_page(request):
-    if request.user.role == 'Manager':
-        assignments = TaskAssignment.objects.filter(task__assigned_by=request.user)
-        tasks = Task.objects.filter(assigned_by=request.user)
-        employees = CustomUser.objects.filter(role='Employee')
-    else:
-        assignments = TaskAssignment.objects.filter(employee=request.user)
-        tasks = []
-        employees = []
-
-    return render(request, 'tasks/task_assign.html', {
-        'assignments': assignments,
-        'tasks': tasks,
-        'employees': employees,
-        'user': request.user
-    })
-
 
 
 class TaskProgressListCreateView(generics.ListCreateAPIView):
@@ -297,21 +302,6 @@ class TaskProgressListCreateView(generics.ListCreateAPIView):
         serializer.save(task=task, updated_by=user)
 
 
-
-class EmployeeDashboardView(View):
-    """
-    Template view for the employee dashboard.
-    Displays task overview, priority tasks, recent activity, and all tasks.
-    """
-    template_name = 'employee_dashboard.html'
-
-    def get(self, request):
-        """
-        Handle GET request for the employee dashboard template.
-        """
-        return render(request, self.template_name)
-
-
 class EmployeeDashboardAPIView(APIView):
     """
     API view that provides all data needed for the employee dashboard.
@@ -329,7 +319,8 @@ class EmployeeDashboardAPIView(APIView):
         if user.role == 'Employee':
             # For employees, use their own data
             employee = user
-            tasks = Task.objects.filter(assigned_to=employee)
+            # Get tasks assigned to this employee via TaskAssignment
+            tasks = Task.objects.filter(assignments__employee=employee)
         else:
             # For managers, we need to find an employee to show
             # First, try to get the first employee managed by this manager
@@ -338,7 +329,8 @@ class EmployeeDashboardAPIView(APIView):
 
             if employees.exists():
                 employee = employees.first()
-                tasks = Task.objects.filter(assigned_to=employee)
+                # Get tasks assigned to this employee via TaskAssignment
+                tasks = Task.objects.filter(assignments__employee=employee)
             else:
                 # If no employees are managed by this manager, use the manager's data
                 employee = user
@@ -637,4 +629,6 @@ class UserActivityListView(generics.ListAPIView):
         else:
             # Employees see only their own activities
             return UserActivity.objects.filter(user=user).order_by('-created_at')
+
+
 

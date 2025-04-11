@@ -7,7 +7,6 @@ from django.db import models
 from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
 from notifications.email_services import send_email_notification
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee

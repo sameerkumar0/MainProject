@@ -33,7 +33,6 @@ class Task(models.Model):
     # New fields for dashboard
     start_date = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    tags = models.CharField(max_length=200, blank=True, help_text="Comma-separated tags")
 
     def __str__(self):
         return self.title
