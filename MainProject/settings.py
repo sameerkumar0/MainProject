@@ -164,6 +164,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "users.CustomUser"
 
+# Authentication settings
+LOGIN_URL = '/auth/login/employee/'
+LOGIN_REDIRECT_URL = '/dashboard/employee_dashboard/'
+LOGOUT_REDIRECT_URL = '/'
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",

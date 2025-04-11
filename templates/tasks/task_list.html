@@ -1,136 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>All Tasks</title>
+  <meta charset="UTF-8">
+  <title>Task List</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body {
-      background-color: #1e1e1e;
-      color: #fff;
-      font-family: 'Poppins', sans-serif;
-      padding: 40px;
-    }
-
-    h2 {
-      text-align: center;
-      color: #4caf50;
-    }
-
-    .logout-btn {
-      float: right;
-      padding: 10px 20px;
-      background-color: #f44336;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .logout-btn:hover {
-      background-color: #d32f2f;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 30px;
-      background-color: #2e2e2e;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    th, td {
-      padding: 12px 20px;
-      text-align: left;
-    }
-
-    th {
-      background-color: #4caf50;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #3a3a3a;
-    }
-
-    a {
-      color: #03a9f4;
-      text-decoration: underline;
-    }
+    .high-priority { background-color: #fff3cd; }
+    .urgent-priority { background-color: #f8d7da; }
   </style>
 </head>
-<body>
+<body class="bg-light">
+  <div class="container py-4">
+    <h2 class="mb-4" id="role-title">Loading Tasks...</h2>
 
-  <button class="logout-btn" onclick="logout()">Logout</button>
-  <h2>All Assigned Tasks</h2>
+    <!-- Filters -->
+    <form id="filter-form" class="row g-3 mb-4">
+      <div class="col-md-3">
+        <input type="text" name="search" class="form-control" placeholder="Search task..." />
+      </div>
+      <div class="col-md-2">
+        <select name="status" class="form-select">
+          <option value="">Status</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="priority" class="form-select">
+          <option value="">Priority</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <input type="date" name="due_date_from" class="form-control" placeholder="From Due Date" />
+      </div>
+      <div class="col-md-2">
+        <input type="date" name="due_date_to" class="form-control" placeholder="To Due Date" />
+      </div>
+      <div class="col-md-1 d-grid">
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+    </form>
 
-  <table id="taskTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Description</th>
-        <th>Assigned To</th>
-        <th>Status</th>
-        <th>Document</th>
-        <th>Created At</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Tasks will be loaded here -->
-    </tbody>
-  </table>
+    <!-- Task List Table -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Due Date</th>
+          </tr>
+        </thead>
+        <tbody id="task-table-body">
+          <!-- Dynamic Rows Here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
-    const token = localStorage.getItem("access_token");
+    const taskTableBody = document.getElementById('task-table-body');
+    const roleTitle = document.getElementById('role-title');
 
-    async function fetchTasks() {
+    async function fetchTasks(query = '') {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
-          method: "GET",
+        const res = await fetch(`/api/tasks/${query}`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
+            'Authorization': `Bearer ${localStorage.getItem('access')}`  // JWT Token
           }
         });
+        const tasks = await res.json();
 
-        if (response.status === 401) {
-          alert("Session expired. Please login again.");
-          logout();
-          return;
+        // Clear old data
+        taskTableBody.innerHTML = '';
+
+        if (tasks.length === 0) {
+          taskTableBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
         }
 
-        const tasks = await response.json();
-        const tbody = document.querySelector("#taskTable tbody");
-        tbody.innerHTML = "";
-
         tasks.forEach(task => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
+          const tr = document.createElement('tr');
+
+          if (task.priority === 'urgent') tr.classList.add('urgent-priority');
+          else if (task.priority === 'high') tr.classList.add('high-priority');
+
+          tr.innerHTML = `
             <td>${task.title}</td>
             <td>${task.description}</td>
-            <td>${task.assigned_to.username}</td>
-            <td>${task.status.replace('_', ' ')}</td>
-            <td>${task.document ? `<a href="${task.document}" target="_blank">View</a>` : 'N/A'}</td>
-            <td>${new Date(task.created_at).toLocaleString()}</td>
+            <td>${task.status}</td>
+            <td>${task.priority}</td>
+            <td>${task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</td>
           `;
-          tbody.appendChild(row);
+          taskTableBody.appendChild(tr);
         });
 
+        // Set title based on role from token (optional improvement: decode JWT)
+        const userRole = localStorage.getItem('role'); // Or decode from JWT
+        if (userRole === 'Manager') {
+          roleTitle.textContent = "All Tasks (Manager View)";
+        } else {
+          roleTitle.textContent = "My Tasks";
+        }
+
       } catch (error) {
-        console.error("Error fetching tasks:", error);
-        alert("Failed to load tasks.");
+        console.error('Error fetching tasks:', error);
       }
     }
 
-    function logout() {
-      localStorage.clear();
-      window.location.href = "/api/users/manager_login/";
-    }
-
-    // Load tasks on page load
+    // Initial load
     fetchTasks();
+
+    // Filter form submit
+    document.getElementById('filter-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const params = new URLSearchParams(formData).toString();
+      fetchTasks('?' + params);
+    });
   </script>
 </body>
 </html>

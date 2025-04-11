@@ -1,877 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Manager Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --text-color: #f1f5f9;
-      --subtext-color: #94a3b8;
-      --primary-color: #3b82f6;
-      --accent-color: #8b5cf6;
-      --green-color: #10b981;
-      --red-color: #ef4444;
-    }
+    <meta charset="UTF-8">
+    <title>Manager Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin: 0;
-      padding: 0;
-    }
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    .header {
-      background-color: #1e40af;
-      color: white;
-      padding: 20px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    }
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    .dashboard-wrapper {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 30px;
-      padding: 30px;
-    }
+    <!-- Optional: Add Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    .card {
-      background-color: var(--card-bg);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-    }
-
-    .section-title {
-      font-size: 1.4rem;
-      font-weight: 600;
-      margin-bottom: 15px;
-      color: var(--primary-color);
-    }
-
-    .employee-card {
-      background-color: #334155;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-left: 4px solid var(--primary-color);
-      transition: transform 0.2s;
-    }
-
-    .employee-card:hover {
-      transform: scale(1.02);
-    }
-
-    .employee-name {
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .employee-meta {
-      font-size: 0.85rem;
-      color: var(--subtext-color);
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: white;
-      margin-top: 5px;
-    }
-
-    .status-available {
-      background-color: var(--green-color);
-    }
-
-    .status-unavailable {
-      background-color: var(--red-color);
-    }
-
-    .deadline-list, .top-performers, .assignment-history {
-      list-style: none;
-      padding-left: 0;
-    }
-
-    .deadline-item, .performer-item, .history-item {
-      background-color: #475569;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
-
-
-    @media (max-width: 768px) {
-      .dashboard-wrapper {
-        grid-template-columns: 1fr;
-      }
-    }
-    /* Modal Styles */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.3s ease;
-    }
-
-    .modal-overlay.active {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal {
-      background-color: var(--card-bg);
-      width: 90%;
-      max-width: 600px;
-      border-radius: 12px;
-      padding: 25px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-      transform: translateY(-20px);
-      transition: all 0.3s ease;
-    }
-
-    .modal-overlay.active .modal {
-      transform: translateY(0);
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-
-    .close-modal {
-      background: none;
-      border: none;
-      color: var(--subtext-color);
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: color 0.3s ease;
-    }
-
-    .close-modal:hover {
-      color: var(--text-color);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-      color: var(--text-color);
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 12px;
-      background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      color: var(--text-color);
-      font-size: 16px;
-      transition: all 0.3s ease;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary {
-      background-color: var(--primary-color);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background-color: #2563eb;
-    }
-
-    .btn-block {
-      display: block;
-      width: 100%;
-    }
-
-    .task-list, .employee-list {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-    }
-
-    .task-item, .employee-item {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    .task-item:last-child, .employee-item:last-child {
-      border-bottom: none;
-    }
-
-    .task-item:hover, .employee-item:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .task-item.selected, .employee-item.selected {
-      background-color: rgba(59, 130, 246, 0.2);
-    }
-
-    .task-info, .employee-info {
-      flex: 1;
-    }
-
-    .task-title, .employee-name {
-      font-weight: 500;
-      color: var(--text-color);
-    }
-
-    .task-meta, .employee-email {
-      font-size: 0.8rem;
-      color: var(--subtext-color);
-    }
-
-    .employee-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background-color: var(--primary-color);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      margin-right: 12px;
-    }
-
-    .priority-badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      margin-left: 8px;
-    }
-
-    .priority-low {
-      background-color: rgba(16, 185, 129, 0.2);
-      color: var(--green-color);
-    }
-
-    .priority-medium {
-      background-color: rgba(59, 130, 246, 0.2);
-      color: var(--primary-color);
-    }
-
-    .priority-high {
-      background-color: rgba(245, 158, 11, 0.2);
-      color: #f59e0b;
-    }
-
-    .priority-urgent {
-      background-color: rgba(239, 68, 68, 0.2);
-      color: var(--red-color);
-    }
-
-    .alert {
-      padding: 12px 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    .alert-success {
-      background-color: rgba(16, 185, 129, 0.2);
-      border: 1px solid var(--green-color);
-      color: var(--green-color);
-    }
-
-    .alert-error {
-      background-color: rgba(239, 68, 68, 0.2);
-      border: 1px solid var(--red-color);
-      color: var(--red-color);
-    }
-
-    .task-details {
-      background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 15px;
-    }
-
-    .task-detail-row {
-      margin-bottom: 10px;
-    }
-
-    .task-detail-label {
-      font-weight: 500;
-      margin-right: 8px;
-      color: var(--subtext-color);
-    }
-
-    .task-detail-value {
-      color: var(--text-color);
-    }
-  </style>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .task-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .task-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .priority-high {
+            border-left: 4px solid #EF4444;
+        }
+        .priority-medium {
+            border-left: 4px solid #F59E0B;
+        }
+        .priority-low {
+            border-left: 4px solid #10B981;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+        }
+        .status-pending {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+        .status-in_progress {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+        .status-completed {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #E5E7EB;
+            overflow: hidden;
+        }
+        .progress-value {
+            height: 100%;
+            border-radius: 3px;
+            background-color: #3B82F6;
+        }
+    </style>
 </head>
-<body>
-  <!-- HEADER -->
-  <div class="header">
-    <div>
-      <h1>Manager Dashboard</h1>
-      <p>Overview of team activity and task performance</p>
-    </div>
-    <div style="display: flex; align-items: center; gap: 15px;">
-      <button onclick="openAssignModal()" style="background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer;">
-        + Assign Task
-      </button>
-      <div id="managerInfo" style="display: flex; align-items: center; gap: 10px;">Loading...</div>
-    </div>
-  </div>
+<body class="bg-gray-50">
 
-  <!-- Task Assignment Modal -->
-  <div class="modal-overlay" id="taskModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">Assign Existing Task</h3>
-        <button class="close-modal" onclick="closeModal()">&times;</button>
-      </div>
-
-      <div class="alert alert-success" id="successAlert">Task assigned successfully!</div>
-      <div class="alert alert-error" id="errorAlert">Error assigning task. Please try again.</div>
-
-      <form id="assignTaskForm">
-        <div class="form-group">
-          <label class="form-label" for="taskSelect">Select Task*</label>
-          <select class="form-control" id="taskSelect" required>
-            <option value="" disabled selected>-- Select a task --</option>
-            <!-- Tasks will be loaded here -->
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="employeeSelect">Assign To*</label>
-          <select class="form-control" id="employeeSelect" required>
-            <option value="" disabled selected>-- Select an employee --</option>
-            <!-- Employees will be loaded here -->
-          </select>
-        </div>
-
-        <div class="form-group" id="taskDetailsContainer" style="display: none;">
-          <label class="form-label">Task Details</label>
-          <div class="task-details" id="taskDetails">
-            <!-- Task details will be shown here -->
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Assign Task</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- DASHBOARD -->
-  <div class="dashboard-wrapper">
-    <!-- Left Column -->
-    <div>
-      <div class="card">
-        <h2 class="section-title">Employees</h2>
-        <div id="employeeList"></div>
-      </div>
-      <div class="card">
-        <h2 class="section-title">Upcoming Deadlines</h2>
-        <ul id="upcomingDeadlines" class="deadline-list"></ul>
-      </div>
-      <div class="card">
-        <h2 class="section-title">Top Performers</h2>
-        <ul id="topPerformers" class="top-performers"></ul>
-      </div>
-    </div>
-
-    <!-- Right Column -->
-    <div>
-      <div class="card">
-        <h2 class="section-title">Task Assignment History</h2>
-        <ul id="assignmentHistory" class="assignment-history"></ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- ASSIGN TASK MODAL -->
-  <div id="assignModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
-    <div style="background: white; padding: 20px; border-radius: 10px; width: 400px; color: black;">
-      <h3>Assign Task</h3>
-      <label>Employee Email:</label><br>
-      <input type="text" id="assignEmail" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Task Title:</label><br>
-      <input type="text" id="assignTitle" style="width: 100%; margin-bottom: 10px;"><br>
-      <label>Due Date:</label><br>
-      <input type="date" id="assignDue" style="width: 100%; margin-bottom: 15px;"><br>
-      <button onclick="submitAssignTask()" style="background: var(--primary-color); color: white; padding: 8px 15px; border: none; border-radius: 5px;">Submit</button>
-      <button onclick="closeAssignModal()" style="margin-left: 10px;">Cancel</button>
-    </div>
-  </div>
-
-  <!-- SCRIPTS -->
-  <script>
-    document.addEventListener("DOMContentLoaded", fetchDashboardData);
-
-    // Store dashboard data globally for use in the modal
-    window.dashboardData = null;
-
-    // Initialize the task assignment form
-    document.addEventListener('DOMContentLoaded', function() {
-      document.getElementById('assignTaskForm').addEventListener('submit', assignTask);
-
-      // Close modal when clicking outside of it
-      document.getElementById('taskModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-          closeModal();
-        }
-      });
-    });
-
-    async function fetchDashboardData() {
-      const accessToken = localStorage.getItem("access_token");
-
-      try {
-        const response = await fetch("/api/manager/dashboard/", {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const data = await response.json();
-
-        // Store data globally for use in the modal
-        window.dashboardData = data;
-
-        renderManager(data.manager);
-        renderEmployees(data.employees);
-        renderDeadlines(data.upcoming_deadlines);
-        renderPerformers(data.top_performers);
-        renderHistory(data.assignment_history);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err);
-      }
-    }
-
-    // Modal functions
-    function openAssignModal() {
-      // Clear form
-      document.getElementById('assignTaskForm').reset();
-      document.getElementById('selectedTask').value = '';
-      document.getElementById('selectedEmployee').value = '';
-      document.getElementById('successAlert').style.display = 'none';
-      document.getElementById('errorAlert').style.display = 'none';
-
-      // Load tasks and employees for the modal
-      loadUnassignedTasks();
-      loadModalEmployees();
-
-      // Show modal
-      document.getElementById('taskModal').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('taskModal').classList.remove('active');
-    }
-
-    function renderManager(manager) {
-      document.getElementById("managerInfo").innerHTML = `
-        <span>${manager.name || 'Manager'}</span>
-        <img src="${manager.profile_photo || '/static/default-avatar.png'}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white;" />
-      `;
-    }
-
-    function renderEmployees(employees) {
-      const container = document.getElementById("employeeList");
-      container.innerHTML = "";
-      employees.forEach(emp => {
-        const card = document.createElement("div");
-        card.className = "employee-card";
-
-        card.innerHTML = `
-          <div class="employee-name">${emp.name}</div>
-          <div class="employee-meta">${emp.email}</div>
-          <div class="employee-meta">${emp.department || 'No Department'}</div>
-          <div class="employee-meta">Tech Stack: ${emp.tech_stack.join(", ")}</div>
-          <div class="employee-meta">Tasks: ${emp.total_tasks} | Completed: ${emp.completed_tasks}</div>
-          <div class="status-badge ${emp.is_available ? 'status-available' : 'status-unavailable'}">
-            ${emp.is_available ? 'Available' : 'Unavailable'}
-          </div>
-        `;
-
-        container.appendChild(card);
-      });
-    }
-
-    function renderDeadlines(deadlines) {
-      const list = document.getElementById("upcomingDeadlines");
-      list.innerHTML = "";
-      deadlines.forEach(item => {
-        list.innerHTML += `<li class="deadline-item">${item.title} - Due: ${item.due_date} - ${item.status} (${item.priority})</li>`;
-      });
-    }
-
-    function renderPerformers(performers) {
-      const list = document.getElementById("topPerformers");
-      list.innerHTML = "";
-      performers.forEach(p => {
-        list.innerHTML += `<li class="performer-item">${p.name} - ${p.completed_tasks} tasks</li>`;
-      });
-    }
-
-    function renderHistory(history) {
-      const list = document.getElementById("assignmentHistory");
-      list.innerHTML = "";
-      history.forEach(h => {
-        list.innerHTML += `<li class="history-item">${h.task} assigned to ${h.employee} on ${h.assigned_at} - Status: ${h.status}</li>`;
-      });
-    }
-
-
-
-    // Store tasks globally for reference
-    window.tasksList = [];
-
-    async function loadUnassignedTasks() {
-      const taskSelect = document.getElementById('taskSelect');
-
-      try {
-        // Fetch unassigned tasks
-        const response = await fetch('/api/tasks/?status=pending', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch tasks');
-        }
-
-        const tasks = await response.json();
-
-        // Filter for unassigned tasks (tasks without assigned_to)
-        const unassignedTasks = tasks.filter(task => !task.assigned_to);
-
-        // Store tasks globally for reference
-        window.tasksList = unassignedTasks;
-
-        // Clear existing options except the first one
-        while (taskSelect.options.length > 1) {
-          taskSelect.remove(1);
-        }
-
-        // Add tasks to select
-        if (unassignedTasks.length === 0) {
-          const option = document.createElement('option');
-          option.text = 'No unassigned tasks available';
-          option.disabled = true;
-          taskSelect.add(option);
-        } else {
-          unassignedTasks.forEach(task => {
-            const option = document.createElement('option');
-            option.value = task.id;
-            option.text = `${task.title} (${task.priority})`;
-            taskSelect.add(option);
-          });
-        }
-
-        // Add change event listener
-        taskSelect.addEventListener('change', showTaskDetails);
-
-      } catch (error) {
-        console.error('Error loading tasks:', error);
-        // Clear existing options except the first one
-        while (taskSelect.options.length > 1) {
-          taskSelect.remove(1);
-        }
-
-        const option = document.createElement('option');
-        option.text = 'Error loading tasks';
-        option.disabled = true;
-        taskSelect.add(option);
-      }
-    }
-
-    function showTaskDetails() {
-      const taskId = document.getElementById('taskSelect').value;
-      const detailsContainer = document.getElementById('taskDetailsContainer');
-      const detailsDiv = document.getElementById('taskDetails');
-
-      if (!taskId) {
-        detailsContainer.style.display = 'none';
-        return;
-      }
-
-      // Find the selected task
-      const task = window.tasksList.find(t => t.id == taskId);
-
-      if (!task) {
-        detailsContainer.style.display = 'none';
-        return;
-      }
-
-      // Format dates
-      const createdDate = new Date(task.created_at).toLocaleString();
-      const dueDate = task.due_date ? new Date(task.due_date).toLocaleString() : 'Not set';
-
-      // Build details HTML
-      const detailsHTML = `
-        <div class="task-detail-row">
-          <span class="task-detail-label">Title:</span>
-          <span class="task-detail-value">${task.title}</span>
-        </div>
-        <div class="task-detail-row">
-          <span class="task-detail-label">Description:</span>
-          <span class="task-detail-value">${task.description || 'No description'}</span>
-        </div>
-        <div class="task-detail-row">
-          <span class="task-detail-label">Priority:</span>
-          <span class="task-detail-value">
-            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-          </span>
-        </div>
-        <div class="task-detail-row">
-          <span class="task-detail-label">Created:</span>
-          <span class="task-detail-value">${createdDate}</span>
-        </div>
-        <div class="task-detail-row">
-          <span class="task-detail-label">Due Date:</span>
-          <span class="task-detail-value">${dueDate}</span>
-        </div>
-        ${task.tags ? `
-        <div class="task-detail-row">
-          <span class="task-detail-label">Tags:</span>
-          <span class="task-detail-value">${task.tags}</span>
-        </div>
-        ` : ''}
-      `;
-
-      detailsDiv.innerHTML = detailsHTML;
-      detailsContainer.style.display = 'block';
-    }
-
-    async function loadModalEmployees() {
-      const container = document.getElementById('modalEmployeeList');
-
-      try {
-        // Use the employees data we already have from the dashboard
-        if (window.dashboardData && window.dashboardData.employees) {
-          renderModalEmployees(window.dashboardData.employees);
-          return;
-        }
-
-        // If we don't have the data yet, fetch it
-        const response = await fetch('/api/users/list_employee/', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch employees');
-        }
-
-        const employees = await response.json();
-        renderModalEmployees(employees);
-
-      } catch (error) {
-        console.error('Error loading employees:', error);
-        container.innerHTML = `
-          <div style="padding: 15px; text-align: center; color: var(--red-color);">
-            Failed to load employees. Please try again.
-          </div>
-        `;
-      }
-    }
-
-    function renderModalEmployees(employees) {
-      const container = document.getElementById('modalEmployeeList');
-
-      if (!employees || employees.length === 0) {
-        container.innerHTML = `
-          <div style="padding: 15px; text-align: center; color: var(--subtext-color);">
-            No employees found.
-          </div>
-        `;
-        return;
-      }
-
-      const html = employees.map(emp => {
-        // Get initials for avatar
-        const name = emp.name || `${emp.first_name} ${emp.last_name}`;
-        const initials = name.split(' ')
-          .map(n => n.charAt(0))
-          .join('')
-          .toUpperCase();
-
-        // Get employee ID
-        const id = emp.id;
-
-        return `
-          <div class="employee-item" data-id="${id}" onclick="selectEmployee(this, ${id})">
-            <div class="employee-avatar">${initials}</div>
-            <div class="employee-info">
-              <div class="employee-name">${name}</div>
-              <div class="employee-email">${emp.email}</div>
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="text-2xl font-semibold text-blue-600">
+                Task Manager
             </div>
-          </div>
-        `;
-      }).join('');
 
-      container.innerHTML = html;
-    }
+            <!-- Navigation Links -->
+            <div class="flex items-center gap-6">
+                <a href="{% url 'create_task' %}" class="text-gray-700 hover:text-blue-600 font-medium">Create Task</a>
+                <a href="{% url 'task-assign' %}" class="text-gray-700 hover:text-blue-600 font-medium">Assign Task</a>
+            </div>
 
-    function selectEmployee(element, employeeId) {
-      // Remove selected class from all employees
-      document.querySelectorAll('.employee-item').forEach(item => {
-        item.classList.remove('selected');
-      });
+            <!-- Profile Section -->
+            <div class="flex items-center space-x-3">
+                {% if request.user.profile_photo %}
+                    <img src="{{ request.user.profile_photo.url }}" alt="Profile Photo"
+                         class="w-10 h-10 rounded-full object-cover">
+                {% else %}
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                        {{ request.user.first_name|default:request.user.username|slice:":1" }}
+                    </div>
+                {% endif %}
+                <span class="text-gray-800 font-semibold">{{ request.user.first_name }} {{ request.user.last_name }}</span>
+            </div>
+        </div>
+    </nav>
 
-      // Add selected class to clicked employee
-      element.classList.add('selected');
+    <!-- Dashboard Content -->
+    <div class="max-w-7xl mx-auto mt-8 px-4 pb-12">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">Welcome, {{ request.user.first_name }}</h2>
 
-      // Set the employee ID in the hidden input
-      document.getElementById('selectedEmployee').value = employeeId;
-    }
+        <!-- Dashboard Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Tasks -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Tasks</p>
+                        <p class="text-2xl font-bold text-gray-800 mt-1">{{ total_tasks }}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">Completion Rate</p>
+                        <p class="text-sm font-medium text-blue-600">{{ completion_rate }}%</p>
+                    </div>
+                    <div class="progress-bar mt-1">
+                        <div class="progress-value" style="width: {{ completion_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
 
-    async function assignTask(event) {
-      event.preventDefault();
+            <!-- Pending Tasks -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Pending Tasks</p>
+                        <p class="text-2xl font-bold text-amber-500 mt-1">{{ pending_tasks }}</p>
+                    </div>
+                    <div class="bg-amber-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">Due Today</p>
+                        <p class="text-sm font-medium text-amber-500">{{ due_today_tasks }}</p>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <p class="text-sm text-gray-500">Due This Week</p>
+                        <p class="text-sm font-medium text-amber-500">{{ due_this_week_tasks }}</p>
+                    </div>
+                </div>
+            </div>
 
-      const taskId = document.getElementById('taskSelect').value;
-      const employeeId = document.getElementById('employeeSelect').value;
+            <!-- In Progress Tasks -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">In Progress</p>
+                        <p class="text-2xl font-bold text-blue-500 mt-1">{{ in_progress_tasks }}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">Active Tasks</p>
+                        <p class="text-sm font-medium text-blue-500">{{ pending_tasks|add:in_progress_tasks }}</p>
+                    </div>
+                </div>
+            </div>
 
-      if (!taskId) {
-        showError('Please select a task to assign.');
-        return;
-      }
+            <!-- Completed Tasks -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Completed</p>
+                        <p class="text-2xl font-bold text-green-500 mt-1">{{ completed_tasks }}</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500">Overdue Tasks</p>
+                        <p class="text-sm font-medium text-red-500">{{ overdue_tasks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-      if (!employeeId) {
-        showError('Please select an employee to assign the task to.');
-        return;
-      }
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Task Status Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Task Status Overview</h3>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="taskStatusChart"></canvas>
+                    </div>
+                </div>
 
-      try {
-        // Update the task with the assigned employee
-        const response = await fetch(`/api/tasks/${taskId}/`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            assigned_to: employeeId,
-            status: 'assigned'
-          })
+                <!-- Overdue Tasks -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Overdue Tasks</h3>
+                        {% if overdue_tasks > 0 %}
+                            <span class="text-sm font-medium text-red-500">{{ overdue_tasks }} tasks overdue</span>
+                        {% else %}
+                            <span class="text-sm font-medium text-green-500">No overdue tasks</span>
+                        {% endif %}
+                    </div>
+
+                    {% if overdue_task_list %}
+                        <div class="space-y-4">
+                            {% for task in overdue_task_list %}
+                                <div class="task-card p-4 bg-gray-50 rounded-lg border border-gray-200 priority-high">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h4 class="font-medium text-gray-800">{{ task.title }}</h4>
+                                            <p class="text-sm text-gray-500 mt-1">Due: {{ task.due_date|date:"M d, Y" }}</p>
+                                        </div>
+                                        <span class="status-badge status-{{ task.status }}">{{ task.status|title }}</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                            <span>Progress</span>
+                                            <span>{{ task.progress }}%</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-value" style="width: {{ task.progress }}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 flex justify-between items-center">
+                                        <div class="text-xs text-gray-500">
+                                            {% if task.assignments.all %}
+                                                {% with assignment=task.assignments.first %}
+                                                    Assigned to: {{ assignment.employee.first_name }} {{ assignment.employee.last_name }}
+                                                {% endwith %}
+                                            {% else %}
+                                                Not assigned
+                                            {% endif %}
+                                        </div>
+                                        <a href="{% url 'task_detail_page' task.id %}" class="text-xs text-blue-600 hover:text-blue-800">View Details</a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No overdue tasks</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <!-- Unassigned Tasks -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Unassigned Tasks</h3>
+                        <a href="{% url 'task-assign' %}" class="text-sm font-medium text-blue-600 hover:text-blue-800">Assign Tasks</a>
+                    </div>
+
+                    {% if unassigned_tasks %}
+                        <div class="space-y-3">
+                            {% for task in unassigned_tasks|slice:":5" %}
+                                <div class="task-card p-3 bg-gray-50 rounded-lg border border-gray-200
+                                    {% if task.priority == 'high' %}priority-high
+                                    {% elif task.priority == 'medium' %}priority-medium
+                                    {% else %}priority-low{% endif %}">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="font-medium text-gray-800">{{ task.title }}</h4>
+                                        <span class="text-xs font-medium
+                                            {% if task.priority == 'high' %}text-red-500
+                                            {% elif task.priority == 'medium' %}text-amber-500
+                                            {% else %}text-green-500{% endif %}">
+                                            {{ task.priority|title }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Due: {{ task.due_date|date:"M d, Y" }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if unassigned_tasks.count > 5 %}
+                            <div class="mt-4 text-center">
+                                <a href="{% url 'task_list' %}" class="text-sm text-blue-600 hover:text-blue-800">View all unassigned tasks</a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No unassigned tasks</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Team Members -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Team Members</h3>
+                        <a href="{% url 'list_employees' %}" class="text-sm font-medium text-blue-600 hover:text-blue-800">View All</a>
+                    </div>
+
+                    {% if employees %}
+                        <div class="space-y-4">
+                            {% for employee in employees|slice:":5" %}
+                                <div class="flex items-center space-x-3">
+                                    {% if employee.profile_photo %}
+                                        <img src="{{ employee.profile_photo.url }}" alt="{{ employee.first_name }}" class="w-10 h-10 rounded-full object-cover">
+                                    {% else %}
+                                        <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600">
+                                            {{ employee.first_name|slice:":1" }}
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <p class="font-medium text-gray-800">{{ employee.first_name }} {{ employee.last_name }}</p>
+                                        <p class="text-xs text-gray-500">{{ employee.email }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No team members found</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activities</h3>
+
+                    {% if recent_activities %}
+                        <div class="space-y-4">
+                            {% for activity in recent_activities %}
+                                <div class="border-l-2 border-blue-500 pl-3 py-1">
+                                    <p class="text-sm text-gray-800">{{ activity.description }}</p>
+                                    <p class="text-xs text-gray-500 mt-1">{{ activity.created_at|date:"M d, Y H:i" }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No recent activities</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Task Status Chart
+        const taskStatusCtx = document.getElementById('taskStatusChart').getContext('2d');
+        const taskStatusChart = new Chart(taskStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'In Progress', 'Pending', 'Overdue'],
+                datasets: [{
+                    data: [{{ completed_tasks }}, {{ in_progress_tasks }}, {{ pending_tasks }}, {{ overdue_tasks }}],
+                    backgroundColor: [
+                        '#10B981', // Green for completed
+                        '#3B82F6', // Blue for in progress
+                        '#F59E0B', // Amber for pending
+                        '#EF4444'  // Red for overdue
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          let errorMessage = 'Failed to assign task.';
-          if (data.non_field_errors) {
-            errorMessage = data.non_field_errors.join(' ');
-          } else if (typeof data === 'object') {
-            errorMessage = Object.entries(data)
-              .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : value}`)
-              .join('\n');
-          }
-          throw new Error(errorMessage);
-        }
-
-        // Show success message
-        showSuccess('Task assigned successfully!');
-
-        // Reset form
-        document.getElementById('assignTaskForm').reset();
-        document.querySelectorAll('.task-item').forEach(item => {
-          item.classList.remove('selected');
-        });
-        document.querySelectorAll('.employee-item').forEach(item => {
-          item.classList.remove('selected');
-        });
-        document.getElementById('selectedTask').value = '';
-        document.getElementById('selectedEmployee').value = '';
-
-        // Refresh task list
-        loadUnassignedTasks();
-
-        // Refresh dashboard data after a short delay
-        setTimeout(() => {
-          fetchDashboardData();
-        }, 2000);
-
-      } catch (error) {
-        console.error('Error assigning task:', error);
-        showError(error.message);
-      }
-    }
-
-    function showSuccess(message) {
-      const alert = document.getElementById('successAlert');
-      alert.textContent = message;
-      alert.style.display = 'block';
-
-      setTimeout(() => {
-        alert.style.display = 'none';
-      }, 5000);
-    }
-
-    function showError(message) {
-      const alert = document.getElementById('errorAlert');
-      alert.textContent = message;
-      alert.style.display = 'block';
-
-      setTimeout(() => {
-        alert.style.display = 'none';
-      }, 5000);
-    }
-  </script>
+    </script>
 </body>
 </html>

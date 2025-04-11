@@ -441,7 +441,7 @@
             const csrfToken = document.getElementById("csrf_token").value;
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/login/manager/", {
+                const response = await fetch("/api/users/login/manager/", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -458,8 +458,8 @@
                     localStorage.setItem("refresh_token", data.refresh);
                     localStorage.setItem("role", data.role);
 
-                    // Redirect to frontend dashboard (not a protected API endpoint!)
-                    window.location.href = data.redirect_url;
+                    // Redirect to manager dashboard
+                    window.location.href = "/dashboard/";
                 } else {
                     alert(data.error || "Login failed");
                 }

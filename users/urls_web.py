@@ -4,9 +4,9 @@ URL configuration for users app web views.
 from django.urls import path
 from django.shortcuts import render
 from .views import (
-    register_manager, register_emp, 
+    register_manager, register_emp,
     emp_login_page, manager_login_page,
-    list_employee, logout_view, 
+    list_employee, logout_view,
     reset_password_page, employee_profile
 )
 
@@ -18,11 +18,9 @@ urlpatterns = [
     path('login/employee/', emp_login_page, name='employee_login'),
     path('logout/', logout_view, name='logout_page'),
     path('reset-password/', reset_password_page, name='reset_password_page'),
-    
+
     # Employee management pages
     path('employees/', list_employee, name='list_employees'),
     path('employees/<int:pk>/profile/', employee_profile, name='employee_profile'),
-    
-    # Task pages
-    path('employee-tasks/', lambda request: render(request, 'employee_tasks.html'), name='employee_tasks'),
+
 ]

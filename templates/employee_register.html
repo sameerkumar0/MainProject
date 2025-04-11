@@ -401,7 +401,7 @@
         <button type="submit">Register</button>
       </form>
       <p class="login-link">
-        Already have an account? <a href="{% url 'emp_login' %}">Login</a>
+        Already have an account? <a href="{% url 'employee_login' %}">Login</a>
       </p>
     </div>
   </main>
@@ -504,7 +504,7 @@
 
         if (response.ok) {
           alert("Employee registered successfully!");
-          window.location.href = "{% url 'emp_login' %}"; // Redirect to login page
+          window.location.href = "{% url 'employee_login' %}"; // Redirect to login page
         } else {
           let errorMsg = "";
           for (let key in data) {

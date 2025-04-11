@@ -78,35 +78,45 @@ class CustomUser(AbstractUser):
 
     # Dashboard helper methods
     def get_completed_tasks_count(self):
-        return self.tasks.filter(status='completed').count()
+        from tasks.models import Task
+        return Task.objects.filter(assignments__employee=self, status='completed').count()
 
     def get_pending_tasks_count(self):
-        return self.tasks.filter(status='pending').count()
+        from tasks.models import Task
+        return Task.objects.filter(assignments__employee=self, status='pending').count()
 
     def get_in_progress_tasks_count(self):
-        return self.tasks.filter(status='in_progress').count()
+        from tasks.models import Task
+        return Task.objects.filter(assignments__employee=self, status='in_progress').count()
 
     def get_overdue_tasks_count(self):
-        return self.tasks.filter(
+        from tasks.models import Task
+        return Task.objects.filter(
+            assignments__employee=self,
             due_date__lt=timezone.now(),
             status__in=['pending', 'in_progress']
         ).count()
 
     def get_tasks_due_today(self):
+        from tasks.models import Task
         today = timezone.now().date()
-        return self.tasks.filter(
+        return Task.objects.filter(
+            assignments__employee=self,
             due_date__date=today
         )
 
     def get_tasks_due_this_week(self):
+        from tasks.models import Task
         today = timezone.now().date()
         week_end = today + timedelta(days=7)
-        return self.tasks.filter(
+        return Task.objects.filter(
+            assignments__employee=self,
             due_date__date__range=[today, week_end]
         )
 
     def get_completion_rate(self):
-        total = self.tasks.count()
+        from tasks.models import Task
+        total = Task.objects.filter(assignments__employee=self).count()
         if total == 0:
             return 0
         completed = self.get_completed_tasks_count()

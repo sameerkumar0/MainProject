@@ -1,477 +1,262 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Assign Task | Task Management System</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary-color: #3498db;
-      --primary-dark: #2980b9;
-      --primary-light: #e6f2ff;
-      --secondary-color: #2ecc71;
-      --warning-color: #f39c12;
-      --danger-color: #e74c3c;
-      --dark-bg: #1e1e2f;
-      --card-bg: #2c2f48;
-      --text-light: #ecf0f1;
-      --text-muted: #aaa;
-      --border-radius: 8px;
-      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
-
-    body {
-      background-color: var(--dark-bg);
-      color: var(--text-light);
-      line-height: 1.6;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .page-title {
-      font-size: 24px;
-      font-weight: 600;
-    }
-
-    .back-button {
-      background-color: transparent;
-      color: var(--text-light);
-      border: 1px solid var(--text-light);
-      padding: 8px 16px;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .back-button:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border-radius: var(--border-radius);
-      box-shadow: var(--box-shadow);
-      padding: 25px;
-      margin-bottom: 25px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--border-radius);
-      color: var(--text-light);
-      font-size: 16px;
-      transition: all 0.3s ease;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
-    }
-
-    textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 12px 24px;
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    .btn:hover {
-      background-color: var(--primary-dark);
-      transform: translateY(-2px);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    .btn-block {
-      display: block;
-      width: 100%;
-    }
-
-    .form-row {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-
-    .form-row .form-group {
-      flex: 1;
-      margin-bottom: 0;
-    }
-
-    .alert {
-      padding: 15px;
-      border-radius: var(--border-radius);
-      margin-bottom: 20px;
-      display: none;
-    }
-
-    .alert-success {
-      background-color: rgba(46, 204, 113, 0.2);
-      border: 1px solid var(--secondary-color);
-      color: var(--secondary-color);
-    }
-
-    .alert-error {
-      background-color: rgba(231, 76, 60, 0.2);
-      border: 1px solid var(--danger-color);
-      color: var(--danger-color);
-    }
-
-    .employee-list {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: 10px;
-    }
-
-    .employee-item {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      border-radius: var(--border-radius);
-      margin-bottom: 5px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .employee-item:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .employee-item.selected {
-      background-color: rgba(52, 152, 219, 0.2);
-      border: 1px solid var(--primary-color);
-    }
-
-    .employee-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background-color: var(--primary-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 15px;
-      font-weight: 600;
-    }
-
-    .employee-info {
-      flex: 1;
-    }
-
-    .employee-name {
-      font-weight: 500;
-    }
-
-    .employee-role {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: var(--text-muted);
-    }
-
-    /* Animation for the success message */
-    @keyframes fadeInOut {
-      0% { opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .fade-in-out {
-      animation: fadeInOut 5s forwards;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Assign Task</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add Alpine.js for modal functionality -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body>
-  <div class="container">
-    <header>
-      <h1 class="page-title">Assign Task</h1>
-      <a href="/api/task_list/" class="back-button">Back to Tasks</a>
-    </header>
+<body class="bg-gray-100 min-h-screen" x-data="{ modalOpen: false, selectedTask: null, selectedEmployee: null }">
 
-    <div class="alert alert-success" id="success-alert">
-      Task assigned successfully!
-    </div>
-
-    <div class="alert alert-error" id="error-alert">
-      Error assigning task. Please try again.
-    </div>
-
-    <div class="card">
-      <form id="assign-task-form">
-        <div class="form-group">
-          <label for="title">Task Title*</label>
-          <input type="text" id="title" name="title" required>
-        </div>
-
-        <div class="form-group">
-          <label for="description">Description*</label>
-          <textarea id="description" name="description" required></textarea>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="priority">Priority*</label>
-            <select id="priority" name="priority" required>
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="due_date">Due Date*</label>
-            <input type="datetime-local" id="due_date" name="due_date" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="assigned_to">Assign To*</label>
-          <div id="employee-container" class="employee-list">
-            <div class="loading">Loading employees...</div>
-          </div>
-          <input type="hidden" id="assigned_to" name="assigned_to">
-        </div>
-
-        <div class="form-group">
-          <label for="tags">Tags (comma separated)</label>
-          <input type="text" id="tags" name="tags" placeholder="e.g. frontend, urgent, bug">
-        </div>
-
-        <button type="submit" class="btn btn-block">Assign Task</button>
-      </form>
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Get token from localStorage
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        window.location.href = '/api/users/manager_login_page/';
-        return;
-      }
-
-      // Set default due date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(17, 0, 0, 0); // 5:00 PM
-      document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
-
-      // Fetch employees
-      fetchEmployees();
-
-      // Form submission
-      document.getElementById('assign-task-form').addEventListener('submit', assignTask);
-    });
-
-    async function fetchEmployees() {
-      try {
-        const response = await fetch('/api/users/list_employee/', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch employees');
-        }
-
-        const employees = await response.json();
-        renderEmployees(employees);
-      } catch (error) {
-        console.error('Error fetching employees:', error);
-        document.getElementById('employee-container').innerHTML = `
-          <div class="alert alert-error" style="display: block;">
-            Failed to load employees. Please refresh the page.
-          </div>
-        `;
-      }
-    }
-
-    function renderEmployees(employees) {
-      const container = document.getElementById('employee-container');
-      
-      if (!employees || employees.length === 0) {
-        container.innerHTML = '<div class="alert alert-error" style="display: block;">No employees found.</div>';
-        return;
-      }
-
-      const html = employees.map(employee => {
-        const initials = `${employee.first_name.charAt(0)}${employee.last_name.charAt(0)}`.toUpperCase();
-        return `
-          <div class="employee-item" data-id="${employee.id}" onclick="selectEmployee(this, ${employee.id})">
-            <div class="employee-avatar">${initials}</div>
-            <div class="employee-info">
-              <div class="employee-name">${employee.first_name} ${employee.last_name}</div>
-              <div class="employee-role">${employee.email}</div>
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="text-2xl font-semibold text-blue-600">
+                Task Manager
             </div>
-          </div>
-        `;
-      }).join('');
 
-      container.innerHTML = html;
-    }
+            <!-- Navigation Links -->
+            <div class="flex items-center gap-6">
+                <a href="{% url 'create_task' %}" class="text-gray-700 hover:text-blue-600 font-medium">Create Task</a>
+                <a href="{% url 'task-assign' %}" class="text-gray-700 hover:text-blue-600 font-medium">Assign Task</a>
+            </div>
 
-    function selectEmployee(element, employeeId) {
-      // Remove selected class from all employees
-      document.querySelectorAll('.employee-item').forEach(item => {
-        item.classList.remove('selected');
-      });
+            <!-- Profile Section -->
+            <div class="flex items-center space-x-3">
+                {% if request.user.profile_photo %}
+                    <img src="{{ request.user.profile_photo.url }}" alt="Profile Photo"
+                         class="w-10 h-10 rounded-full object-cover">
+                {% else %}
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                        {{ request.user.first_name|default:request.user.username|slice:":1" }}
+                    </div>
+                {% endif %}
+                <span class="text-gray-800 font-semibold">{{ request.user.first_name }} {{ request.user.last_name }}</span>
+            </div>
+        </div>
+    </nav>
 
-      // Add selected class to clicked employee
-      element.classList.add('selected');
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto mt-8 px-4 pb-12">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Task Assignment</h2>
+            <button
+                @click="modalOpen = true"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md flex items-center"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                Assign New Task
+            </button>
+        </div>
 
-      // Set the employee ID in the hidden input
-      document.getElementById('assigned_to').value = employeeId;
-    }
+        <!-- Unassigned Tasks List -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-semibold text-gray-800">Unassigned Tasks</h3>
+            </div>
 
-    async function assignTask(event) {
-      event.preventDefault();
+            {% if tasks %}
+                <div class="divide-y divide-gray-200">
+                    {% for task in tasks %}
+                        <div class="p-6 hover:bg-gray-50 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-800">{{ task.title }}</h4>
+                                    <p class="text-sm text-gray-600 mt-1">{{ task.description|truncatechars:100 }}</p>
+                                    <div class="flex items-center mt-2 space-x-4">
+                                        <span class="text-xs font-medium px-2 py-1 rounded-full
+                                            {% if task.priority == 'high' %}bg-red-100 text-red-800
+                                            {% elif task.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                            {{ task.priority|title }}
+                                        </span>
+                                        {% if task.due_date %}
+                                            <span class="text-xs text-gray-500">Due: {{ task.due_date|date:"M d, Y" }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <button
+                                    @click="modalOpen = true; selectedTask = '{{ task.id }}'"
+                                    class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium text-sm px-3 py-1 rounded"
+                                >
+                                    Assign
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-6 text-center">
+                    <p class="text-gray-500">No unassigned tasks available.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
-      const form = event.target;
-      const assignedTo = document.getElementById('assigned_to').value;
+    <!-- Task Assignment Modal -->
+    <div
+        x-show="modalOpen"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        style="display: none;"
+    >
+        <!-- Modal Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50" @click="modalOpen = false"></div>
 
-      if (!assignedTo) {
-        showError('Please select an employee to assign the task to.');
-        return;
-      }
+        <!-- Modal Content -->
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+            <div
+                class="relative bg-white rounded-lg shadow-xl max-w-md w-full"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform scale-95"
+                x-transition:enter-end="opacity-100 transform scale-100"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 transform scale-100"
+                x-transition:leave-end="opacity-0 transform scale-95"
+            >
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-800">Assign Task to Employee</h3>
+                        <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-500">
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
-      // Collect form data
-      const formData = {
-        title: document.getElementById('title').value,
-        description: document.getElementById('description').value,
-        priority: document.getElementById('priority').value,
-        due_date: document.getElementById('due_date').value,
-        assigned_to: assignedTo,
-        tags: document.getElementById('tags').value
-      };
+                <!-- Modal Body -->
+                <div class="px-6 py-4">
+                    <form id="assignTaskForm" method="POST" action="{% url 'task-assign' %}">
+                        {% csrf_token %}
 
-      try {
-        const response = await fetch('/api/tasks/create/', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
+                        <!-- Task selection -->
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Select Task</label>
+                            <select
+                                name="task_id"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                required
+                                x-model="selectedTask"
+                            >
+                                <option value="" disabled selected>Choose a task</option>
+                                {% for task in tasks %}
+                                    <option value="{{ task.id }}">{{ task.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Employee selection -->
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Assign To</label>
+                            <select
+                                name="employee_id"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                required
+                                x-model="selectedEmployee"
+                            >
+                                <option value="" disabled selected>Choose an employee</option>
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Due date -->
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Due Date</label>
+                            <input
+                                type="date"
+                                name="due_date"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                        </div>
+
+                        <!-- Optional note -->
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Note (optional)</label>
+                            <textarea
+                                name="note"
+                                rows="3"
+                                class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            ></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                    <button
+                        @click="modalOpen = false"
+                        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium rounded-md"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        form="assignTaskForm"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
+                    >
+                        Assign Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript to handle form submission via AJAX
+        document.getElementById('assignTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch('{% url "task-assign" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    task_id: formData.get('task_id'),
+                    employee_id: formData.get('employee_id'),
+                    due_date: formData.get('due_date'),
+                    note: formData.get('note')
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close the modal
+                    document.querySelector('[x-data]').__x.$data.modalOpen = false;
+
+                    // Show success message
+                    alert(data.message);
+
+                    // Reload the page to update the task list
+                    window.location.reload();
+                } else {
+                    // Show error message
+                    alert(data.error || 'An error occurred while assigning the task.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while assigning the task.');
+            });
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          let errorMessage = 'Failed to assign task.';
-          if (data.non_field_errors) {
-            errorMessage = data.non_field_errors.join(' ');
-          } else if (typeof data === 'object') {
-            errorMessage = Object.entries(data)
-              .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : value}`)
-              .join('\n');
-          }
-          throw new Error(errorMessage);
-        }
-
-        // Show success message
-        showSuccess('Task assigned successfully!');
-        
-        // Reset form
-        form.reset();
-        document.querySelectorAll('.employee-item').forEach(item => {
-          item.classList.remove('selected');
-        });
-        document.getElementById('assigned_to').value = '';
-
-        // Set default due date again
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(17, 0, 0, 0);
-        document.getElementById('due_date').value = tomorrow.toISOString().slice(0, 16);
-
-      } catch (error) {
-        console.error('Error assigning task:', error);
-        showError(error.message);
-      }
-    }
-
-    function showSuccess(message) {
-      const alert = document.getElementById('success-alert');
-      alert.textContent = message;
-      alert.style.display = 'block';
-      alert.classList.add('fade-in-out');
-      
-      setTimeout(() => {
-        alert.style.display = 'none';
-        alert.classList.remove('fade-in-out');
-      }, 5000);
-    }
-
-    function showError(message) {
-      const alert = document.getElementById('error-alert');
-      alert.textContent = message;
-      alert.style.display = 'block';
-      alert.classList.add('fade-in-out');
-      
-      setTimeout(() => {
-        alert.style.display = 'none';
-        alert.classList.remove('fade-in-out');
-      }, 5000);
-    }
-  </script>
+    </script>
 </body>
 </html>

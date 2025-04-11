@@ -10,12 +10,12 @@ from .serializers import *
 from .permissions import IsManager, IsEmployee,IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
 from django.db import transaction
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from users.models import CustomUser
 from rest_framework.views import View
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from rest_framework.permissions import IsAuthenticated
 
 # Task Creation View (Separate)
@@ -152,8 +152,15 @@ class TaskListView(generics.ListAPIView):
         return queryset
 
 
+@login_required
 def task_list(request):
-    return render(request,'tasks/task_list.html')
+    """Render the appropriate task list template based on user role."""
+    user = request.user
+
+    if user.role == 'Manager':
+        return render(request, 'tasks/manager_task_list.html')
+    else:  # Employee
+        return render(request, 'tasks/employee_task_list.html')
 
 
 class TaskDetailView(generics.RetrieveAPIView):
@@ -173,6 +180,90 @@ class TaskDetailView(generics.RetrieveAPIView):
 
 def task_detail(request, pk):
     return render(request,'tasks/task_view.html')
+
+
+def task_assign(request):
+    """View for the task assignment page with modal."""
+    if request.method == 'POST':
+        # Handle the AJAX request
+        try:
+            import json
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            employee_id = data.get('employee_id')
+            due_date = data.get('due_date')
+            note = data.get('note')
+
+            if not task_id or not employee_id:
+                return JsonResponse({"error": "Both task and employee are required"}, status=400)
+
+            # Get the task and employee
+            task = Task.objects.get(id=task_id)
+            employee = CustomUser.objects.get(id=employee_id, role='Employee')
+
+            # Check if task is already assigned
+            if TaskAssignment.objects.filter(task=task).exists():
+                return JsonResponse({"error": "This task is already assigned"}, status=400)
+
+            # Create task assignment
+            assignment = TaskAssignment.objects.create(
+                task=task,
+                employee=employee
+            )
+
+            # Update task status and due date
+            task.status = 'assigned'
+            if due_date:
+                from datetime import datetime
+                task.due_date = datetime.strptime(due_date, '%Y-%m-%d')
+            task.save()
+
+            # Create notification for the employee
+            Notification.objects.create(
+                user=employee,
+                notification_type='task_assigned',
+                title='New Task Assigned',
+                message=f'You have been assigned a new task: {task.title}',
+                related_task=task
+            )
+
+            # Create activity record
+            UserActivity.objects.create(
+                user=request.user,
+                activity_type='task_assigned',
+                description=f'Assigned task "{task.title}" to {employee.username}',
+                related_task=task
+            )
+
+            return JsonResponse({
+                "success": True,
+                "message": f"Task '{task.title}' assigned to {employee.first_name} {employee.last_name}",
+                "task_id": task.id,
+                "employee_id": employee.id,
+                "assigned_at": assignment.assigned_at.isoformat()
+            })
+
+        except Task.DoesNotExist:
+            return JsonResponse({"error": "Task not found"}, status=404)
+        except CustomUser.DoesNotExist:
+            return JsonResponse({"error": "Employee not found"}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        # Get all unassigned tasks
+        unassigned_tasks = Task.objects.filter(assignments__isnull=True)
+
+        # Get all employees
+        employees = CustomUser.objects.filter(role='Employee')
+
+        context = {
+            'tasks': unassigned_tasks,
+            'employees': employees
+        }
+
+        return render(request, 'tasks/task_assign.html', context)
 
 
 class TaskUpdateStatusView(generics.UpdateAPIView):
@@ -419,9 +510,16 @@ class EmployeeDashboardAPIView(APIView):
         return Response(serializer.data)
 
 
-@login_required
 def employee_dashboard(request):
-    return render(request,'employee_dashboard.html')
+    # Check if the user is authenticated via JWT
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+
+    # If no Authorization header, check if user is authenticated via session
+    if not auth_header and not request.user.is_authenticated:
+        # Redirect to login page
+        return redirect('employee_login')
+
+    return render(request, 'employee_dashboard.html')
 
 
 class ManagerDashboardView(View):
@@ -434,7 +532,70 @@ class ManagerDashboardView(View):
         """
         Handle GET request for the manager dashboard template.
         """
-        return render(request, self.template_name)
+        # Check if the user is authenticated via JWT
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+
+        # If no Authorization header, check if user is authenticated via session
+        if not auth_header and not request.user.is_authenticated:
+            # Redirect to login page
+            return redirect('manager_login')
+
+        # Get manager data
+        manager = request.user
+
+        # Get all tasks created by this manager
+        manager_tasks = Task.objects.filter(assigned_by=manager)
+
+        # Calculate team metrics
+        today = timezone.now().date()
+        week_end = today + timedelta(days=7)
+
+        total_tasks = manager_tasks.count()
+        pending_tasks = manager_tasks.filter(status='pending').count()
+        in_progress_tasks = manager_tasks.filter(status='in_progress').count()
+        completed_tasks = manager_tasks.filter(status='completed').count()
+        overdue_tasks = manager_tasks.filter(due_date__lt=today, status__in=['pending', 'in_progress']).count()
+        due_today_tasks = manager_tasks.filter(due_date__date=today).count()
+        due_this_week_tasks = manager_tasks.filter(due_date__date__range=[today, week_end]).count()
+
+        # Calculate completion rate
+        completion_rate = 0
+        if total_tasks > 0:
+            completion_rate = (completed_tasks / total_tasks) * 100
+
+        # Get employees managed by this manager
+        employees = CustomUser.objects.filter(manager=manager)
+
+        # Get unassigned tasks
+        unassigned_tasks = Task.objects.filter(assigned_by=manager, assignments__isnull=True)
+
+        # Get recent activities
+        recent_activities = UserActivity.objects.filter(
+            Q(user=manager) | Q(user__in=employees)
+        ).order_by('-created_at')[:5]
+
+        # Get overdue tasks
+        overdue_task_list = manager_tasks.filter(
+            due_date__lt=today,
+            status__in=['pending', 'in_progress']
+        ).order_by('due_date')[:5]
+
+        context = {
+            'total_tasks': total_tasks,
+            'pending_tasks': pending_tasks,
+            'in_progress_tasks': in_progress_tasks,
+            'completed_tasks': completed_tasks,
+            'overdue_tasks': overdue_tasks,
+            'due_today_tasks': due_today_tasks,
+            'due_this_week_tasks': due_this_week_tasks,
+            'completion_rate': round(completion_rate, 1),
+            'employees': employees,
+            'unassigned_tasks': unassigned_tasks,
+            'recent_activities': recent_activities,
+            'overdue_task_list': overdue_task_list
+        }
+
+        return render(request, self.template_name, context)
 
 
 class ManagerDashboardAPIView(APIView):

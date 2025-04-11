@@ -16,6 +16,8 @@
       --shadow-color: rgba(0, 0, 0, 0.2);
       --input-bg: #333;
       --input-focus-bg: #444;
+      --error-color: #ff4757;
+      --success-color: #2ecc71;
     }
 
     .light-theme {
@@ -330,6 +332,50 @@
       transform: translateY(-3px);
       box-shadow: 0 5px 15px var(--shadow-color);
     }
+
+    /* Error and success messages */
+    #statusMessage {
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+    }
+
+    .error {
+      background-color: rgba(255, 71, 87, 0.2);
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+    }
+
+    .success {
+      background-color: rgba(46, 204, 113, 0.2);
+      color: var(--success-color);
+      border: 1px solid var(--success-color);
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .button-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -343,22 +389,31 @@
     </button>
 
     <!-- Home button -->
-    <a href="{% url 'home' %}" class="home-button">
+    <a href="/" class="home-button">
         <span>←</span> Home
     </a>
 
     <div class="container">
         <h2>Employee Login</h2>
+
+        <!-- Status message for errors/success -->
+        <div id="statusMessage"></div>
+
         <form id="loginForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
-            <button type="submit">Login</button>
+            <input type="text" id="username" placeholder="Username" required autocomplete="username">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+            <input type="hidden" id="csrf_token" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <button type="submit">
+                <div class="button-content">
+                    <span>Login</span>
+                    <div class="spinner" id="loginSpinner"></div>
+                </div>
+            </button>
         </form>
 
         <!-- Register Link -->
         <div class="register-link">
-            Don't have an account? <a href="{% url 'register-employee' %}">Register</a>
+            Don't have an account? <a href="/register/employee/">Register</a>
         </div>
     </div>
 
@@ -368,6 +423,35 @@
     <script>
         // Initialize particles.js
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if the user is already logged in
+            const accessToken = localStorage.getItem('access_token');
+            if (accessToken) {
+                // Try to verify the token before redirecting
+                fetch('/api/users/verify-token/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({ token: accessToken })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/dashboard/employee_dashboard/';
+                    } else {
+                        // Token invalid, clear storage
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                    }
+                })
+                .catch(error => {
+                    console.error('Token verification failed:', error);
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                });
+            }
+
+            // Initialize particles
             particlesJS('particles-js', {
                 particles: {
                     number: { value: 80, density: { enable: true, value_area: 800 } },
@@ -403,61 +487,151 @@
 
             // Theme toggle functionality
             const toggleBtn = document.getElementById('theme-toggle');
-
-            // Check for saved theme preference
             const savedTheme = localStorage.getItem("theme");
 
             if (savedTheme === "light") {
                 document.body.classList.add("light-theme");
             }
 
-            // Toggle theme when button is clicked
             toggleBtn.addEventListener("click", function() {
                 document.body.classList.toggle("light-theme");
-
-                // Save preference to localStorage
-                if (document.body.classList.contains("light-theme")) {
-                    localStorage.setItem("theme", "light");
-                } else {
-                    localStorage.setItem("theme", "dark");
-                }
+                localStorage.setItem("theme", document.body.classList.contains("light-theme") ? "light" : "dark");
             });
         });
+
+        // Helper function to show status messages
+        function showMessage(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = type;
+            statusMessage.style.display = 'block';
+
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
 
         // Form submission handler
         document.getElementById("loginForm").addEventListener("submit", async function(event) {
             event.preventDefault();
+
+            // Show spinner
+            const spinner = document.getElementById('loginSpinner');
+            spinner.style.display = 'block';
+
+            // Disable the button
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
 
             const formData = {
                 username: document.getElementById("username").value,
                 password: document.getElementById("password").value
             };
 
-            const csrfToken = document.getElementById("csrf_token").value;
+            // Get CSRF token from Django template and cookies for redundancy
+            let csrfToken = document.getElementById("csrf_token").value;
+            if (!csrfToken) {
+                csrfToken = getCookie('csrftoken');
+            }
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/users/login/employee/", {
+                const response = await fetch("/api/users/login/employee/", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "X-CSRFToken": csrfToken
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    credentials: 'same-origin' // Include cookies in the request
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    alert("Login successful!");
-                    window.location.href = "{% url 'employee_dashboard' %}";
+                    // Store tokens securely in localStorage
+                    localStorage.setItem("access_token", data.access);
+                    localStorage.setItem("refresh_token", data.refresh);
+
+                    // Store user info if available
+                    if (data.user) {
+                        localStorage.setItem("user_data", JSON.stringify(data.user));
+                    }
+
+                    showMessage("Login successful! Redirecting...", "success");
+
+                    // Redirect to dashboard with a slight delay
+                    setTimeout(() => {
+                        // Force redirect to employee dashboard
+                        window.location.href = "/dashboard/employee_dashboard/";
+                    }, 1000);
                 } else {
-                    alert(data.error || "Login failed");
+                    // Handle different error scenarios
+                    if (data.non_field_errors) {
+                        showMessage(data.non_field_errors[0], "error");
+                    } else if (data.detail) {
+                        showMessage(data.detail, "error");
+                    } else if (data.error) {
+                        showMessage(data.error, "error");
+                    } else {
+                        showMessage("Invalid credentials. Please try again.", "error");
+                    }
                 }
             } catch (error) {
                 console.error("Error:", error);
+                showMessage("Network error. Please check your connection and try again.", "error");
+            } finally {
+                // Hide spinner and re-enable button
+                spinner.style.display = 'none';
+                submitButton.disabled = false;
             }
         });
-    </script>
 
+        // Function to refresh token
+        async function refreshToken() {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (!refreshToken) return false;
+
+            try {
+                const response = await fetch('/api/users/token/refresh/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refresh: refreshToken })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('access_token', data.access);
+                    return true;
+                } else {
+                    // Clear tokens if refresh fails
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+                return false;
+            }
+        }
+    </script>
 </body>
 </html>

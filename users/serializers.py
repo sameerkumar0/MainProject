@@ -31,8 +31,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return None
 
     def get_task_counts(self, obj):
+        from tasks.models import Task
         return {
-            "total": obj.tasks.count(),
+            "total": Task.objects.filter(assignments__employee=obj).count(),
             "pending": obj.get_pending_tasks_count(),
             "in_progress": obj.get_in_progress_tasks_count(),
             "completed": obj.get_completed_tasks_count(),

@@ -83,14 +83,20 @@ class EmployeeLoginView(generics.GenericAPIView):
         if user.role != UserRoles.EMPLOYEE:
             return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
 
+        # Create JWT tokens
         refresh = RefreshToken.for_user(user)
         refresh["role"] = user.role  # Attach role to token
 
+        # Also log in the user for session authentication
+        from django.contrib.auth import login
+        login(request, user)
+
+        # Use the hardcoded URL instead of reverse to ensure consistency
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "role": user.role,
-            "redirect_url": request.build_absolute_uri(reverse("employee_dashboard"))
+            "redirect_url": "/dashboard/employee_dashboard/"
         }, status=status.HTTP_200_OK)
 
 def emp_login_page(request):
@@ -110,14 +116,20 @@ class ManagerLoginView(generics.GenericAPIView):
         if user.role != UserRoles.MANAGER:
             return Response({"error": "Unauthorized access"}, status=status.HTTP_403_FORBIDDEN)
 
+        # Create JWT tokens
         refresh = RefreshToken.for_user(user)
         refresh["role"] = user.role  # Attach role to token
 
+        # Also log in the user for session authentication
+        from django.contrib.auth import login
+        login(request, user)
+
+        # Use the hardcoded URL instead of reverse to ensure consistency
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "role": user.role,
-            "redirect_url": request.build_absolute_uri(reverse("manager_dasboard"))
+            "redirect_url": "/dashboard/"
         }, status=status.HTTP_200_OK)
 
 
