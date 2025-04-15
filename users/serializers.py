@@ -101,12 +101,59 @@ class LoginSerializer(serializers.Serializer):
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
+    def validate_email(self, value):
+        # Basic email format validation
+        if not value or '@' not in value:
+            raise serializers.ValidationError("Please enter a valid email address.")
+
+        # Check for common email domains
+        common_domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']
+        domain = value.split('@')[-1].lower()
+
+        if domain not in common_domains and not domain.endswith('.edu') and not domain.endswith('.org') and not domain.endswith('.gov'):
+            # Just a warning, not an error - we'll still process it
+            print(f"Uncommon email domain: {domain} for {value}")
+
+        return value
+
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField()
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value):
+        # Basic email format validation
+        if not value or '@' not in value:
+            raise serializers.ValidationError("Please enter a valid email address.")
+        return value
+
+    def validate_otp(self, value):
+        # Validate OTP format
+        if not value.isdigit() or len(value) != 6:
+            raise serializers.ValidationError("OTP must be a 6-digit number.")
+        return value
+
+    def validate_password(self, value):
+        # Password strength validation
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+
+        # Check for at least one digit
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError("Password must contain at least one digit.")
+
+        # Check for at least one uppercase letter
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter.")
+
+        # Check for at least one special character
+        special_chars = "!@#$%^&*()-_=+[]{}|;:'\",.<>/?`~"
+        if not any(char in special_chars for char in value):
+            raise serializers.ValidationError("Password must contain at least one special character.")
+
+        return value
 
     def validate(self, data):
         if data['password'] != data['confirm_password']:

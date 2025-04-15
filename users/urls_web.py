@@ -9,7 +9,6 @@ from .views import (
     list_employee, logout_view,
     reset_password_page, forgot_password_page, employee_profile,
     manager_employee_dashboard, employee_tasks_view,
-    manager_login_test
 )
 
 urlpatterns = [
@@ -17,7 +16,7 @@ urlpatterns = [
     path('register/manager/', register_manager, name='manager_register'),
     path('register/employee/', register_emp, name='register_employee'),
     path('login/manager/', manager_login_page, name='manager_login'),
-    path('login/manager/test/', manager_login_test, name='manager_login_test'),
+    
     path('login/employee/', emp_login_page, name='employee_login'),
     path('logout/', logout_view, name='logout_page'),
     path('reset-password/', reset_password_page, name='reset_password_page'),

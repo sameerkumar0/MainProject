@@ -11,6 +11,7 @@ from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee
 from rest_framework.permissions import AllowAny
+import random
 
 
 
@@ -175,15 +176,19 @@ class ForgotPasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data['email']
-        try:
-            user = User.objects.get(email=email)
+        # Check if the email exists and is valid
+        user = User.objects.filter(email=email).first()
+
+        if user:
+            # Check if the user is active
+            if not user.is_active:
+                # For security reasons, don't explicitly state the account is inactive
+                return Response({'message': 'If your email is registered and active, you will receive password reset instructions.'}, status=status.HTTP_200_OK)
 
             # Generate a 6-digit OTP
             otp = ''.join(random.choices(string.digits, k=6))
 
-            # Store OTP in session or cache (in a real app, you'd use Django's cache or session)
-            # For simplicity, we'll store it directly in the user model temporarily
-            # In a production environment, you should use a proper OTP storage mechanism
+            # Store OTP in the user model
             user.otp = otp
             user.otp_valid_until = timezone.now() + timezone.timedelta(minutes=15)  # OTP valid for 15 minutes
             user.save()
@@ -204,10 +209,14 @@ class ForgotPasswordView(generics.GenericAPIView):
             )
             send_email_notification(user.email, email_subject, email_body)
 
-            return Response({'message': 'Password reset instructions sent to your email.'}, status=status.HTTP_200_OK)
+            # Log the password reset attempt for security auditing
+            print(f"Password reset requested for {email} at {timezone.now()}")
 
-        except User.DoesNotExist:
+            return Response({'message': 'Password reset instructions sent to your email.'}, status=status.HTTP_200_OK)
+        else:
             # For security reasons, don't reveal whether the email exists or not
+            # But we can log this for internal monitoring
+            print(f"Password reset attempted for non-existent email: {email} at {timezone.now()}")
             return Response({'message': 'If your email is registered, you will receive password reset instructions.'}, status=status.HTTP_200_OK)
 
 def reset_password_page(request):
@@ -232,29 +241,43 @@ class ResetPasswordView(generics.GenericAPIView):
         if new_password != confirm_password:
             return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user = User.objects.get(email=email)
+        # Find the user by email
+        user = User.objects.filter(email=email).first()
 
-            # Verify OTP
-            if not user.otp or user.otp != otp:
-                return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not user:
+            # For security, don't reveal that the user doesn't exist
+            return Response({'error': 'Invalid email or verification code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if OTP is expired
-            if not user.otp_valid_until or timezone.now() > user.otp_valid_until:
-                return Response({'error': 'Verification code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Check if the user is active
+        if not user.is_active:
+            return Response({'error': 'This account is not active.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Update user password
-            user.password = make_password(new_password)
+        # Verify OTP
+        if not user.otp or user.otp != otp:
+            # Log the failed attempt for security monitoring
+            print(f"Failed OTP verification for {email} at {timezone.now()}. Provided: {otp}, Expected: {user.otp}")
+            return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Clear OTP fields after successful reset
-            user.otp = None
-            user.otp_valid_until = None
-            user.save()
+        # Check if OTP is expired
+        if not user.otp_valid_until or timezone.now() > user.otp_valid_until:
+            return Response({'error': 'Verification code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({'message': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+        # Update user password
+        user.password = make_password(new_password)
 
-        except User.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # Clear OTP fields after successful reset
+        user.otp = None
+        user.otp_valid_until = None
+        user.save()
+
+        # Log the successful password reset
+        print(f"Password reset successful for {email} at {timezone.now()}")
+
+        # Return success message with user role for proper redirection
+        return Response({
+            'message': 'Password has been reset successfully.',
+            'role': user.role
+        }, status=status.HTTP_200_OK)
 
 
 
@@ -370,11 +393,6 @@ def manager_employee_dashboard(request):
 def employee_tasks_view(request):
     """View for displaying all employees with their assigned tasks."""
     return render(request, 'employee_tasks_view.html')
-
-
-def manager_login_test(request):
-    """Test view for the manager login page."""
-    return render(request, 'manager_login_test.html')
 
 
 class EmployeeTasksAPIView(generics.ListAPIView):

@@ -496,7 +496,9 @@ class NotificationMarkReadView(generics.UpdateAPIView):
 class UserActivityListView(generics.ListAPIView):
     """
     List all activities for the current user.
+
     """
+    permission_classes = [permissions.IsAuthenticated,IsManager]
     serializer_class = UserActivitySerializer
 
 
