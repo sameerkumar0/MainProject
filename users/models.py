@@ -68,6 +68,10 @@ class CustomUser(AbstractUser):
         default='available'
     )
 
+    # Password reset fields
+    otp = models.CharField(max_length=6, null=True, blank=True)
+    otp_valid_until = models.DateTimeField(null=True, blank=True)
+
     objects = CustomUserManager()  # Assign custom manager
 
     def is_manager(self):

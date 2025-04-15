@@ -104,6 +104,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    otp = serializers.CharField()
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
 
@@ -118,13 +119,14 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     task_counts = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
+    assigned_tasks = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             "id", "username", "first_name", "last_name", "email", "phone_number",
             "tech_stack", "department_name", "is_available", "availability_status",
-            "profile_photo", "task_counts", "completion_rate"
+            "profile_photo", "task_counts", "completion_rate", "assigned_tasks"
         ]
 
     def get_task_counts(self, obj):
@@ -138,6 +140,21 @@ class EmployeeListSerializer(serializers.ModelSerializer):
 
     def get_completion_rate(self, obj):
         return obj.get_completion_rate()
+
+    def get_assigned_tasks(self, obj):
+        from tasks.models import Task
+
+        # Get tasks assigned to this employee
+        tasks = Task.objects.filter(assignments__employee=obj)
+
+        # Return simplified task data
+        return [{
+            'id': task.id,
+            'title': task.title,
+            'status': task.status,
+            'priority': task.priority,
+            'due_date': task.due_date
+        } for task in tasks]
 
 
 class ManagerProfileSerializer(serializers.ModelSerializer):

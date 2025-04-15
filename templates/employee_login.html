@@ -355,6 +355,31 @@
       border: 1px solid var(--success-color);
     }
 
+    /* Register and forgot password links */
+    .register-link, .forgot-password-link {
+      margin-top: 15px;
+      font-size: 14px;
+      color: var(--text-color);
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .register-link a, .forgot-password-link a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .register-link a:hover, .forgot-password-link a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+
+    .forgot-password-link {
+      margin-top: 10px;
+    }
+
     /* Loading spinner */
     .spinner {
       display: none;
@@ -411,9 +436,12 @@
             </button>
         </form>
 
-        <!-- Register Link -->
+        <!-- Register and Forgot Password Links -->
         <div class="register-link">
             Don't have an account? <a href="/register/employee/">Register</a>
+        </div>
+        <div class="forgot-password-link">
+            <a href="/auth/forgot-password/">Forgot Password?</a>
         </div>
     </div>
 

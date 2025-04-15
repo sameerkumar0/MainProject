@@ -106,6 +106,26 @@ class TaskAssignment(models.Model):
     def __str__(self):
         return f"{self.task.title} - {self.employee.username}"
 
+    def save(self, *args, **kwargs):
+        # Check if this is a new assignment (being created)
+        is_new = self.pk is None
+
+        # Save the assignment
+        super().save(*args, **kwargs)
+
+        # Create notification for the employee when a new task is assigned
+        if is_new:
+            from .models import Notification
+
+            # Create notification for the employee
+            Notification.objects.create(
+                user=self.employee,
+                notification_type='task_assigned',
+                title='New Task Assigned',
+                message=f'You have been assigned a new task: "{self.task.title}"',
+                related_task=self.task
+            )
+
     def accept_assignment(self):
         self.accepted = True
         self.accepted_at = timezone.now()
@@ -185,6 +205,19 @@ class TaskProgress(models.Model):
             self.task.status = 'in_progress'
 
         self.task.save()
+
+        # Create notification for the manager
+        if self.task.assigned_by:
+            from .models import Notification
+            status_text = 'completed' if self.progress_percentage == 100 else 'updated'
+
+            Notification.objects.create(
+                user=self.task.assigned_by,
+                notification_type='task_updated',
+                title=f'Task {status_text}',
+                message=f'{self.updated_by.get_full_name()} has {status_text} the task "{self.task.title}" with {self.progress_percentage}% progress.',
+                related_task=self.task
+            )
 
 
 class Notification(models.Model):

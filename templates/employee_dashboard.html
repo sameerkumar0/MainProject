@@ -574,6 +574,140 @@
             color: var(--gray-color);
         }
 
+        /* Notification styles */
+        .stat-card.notification {
+            border-top: 4px solid #9c27b0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .stat-card.notification:hover {
+            background-color: #f8f0fc;
+        }
+
+        .notifications-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 350px;
+            max-width: 90vw;
+            max-height: 80vh;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notifications-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .notifications-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .notifications-list {
+            overflow-y: auto;
+            max-height: calc(80vh - 60px);
+            padding: 0;
+        }
+
+        .notification-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:hover {
+            background-color: #f9f9f9;
+        }
+
+        .notification-item.unread {
+            background-color: #f0f7ff;
+        }
+
+        .notification-item.unread:hover {
+            background-color: #e6f2ff;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .notification-time {
+            font-size: 0.8rem;
+            color: var(--gray-color);
+        }
+
+        .notification-message {
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        .notification-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-task-link {
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .notification-task-link:hover {
+            text-decoration: underline;
+        }
+
+        .mark-read-btn {
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .mark-read-btn:hover {
+            text-decoration: underline;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .dashboard-stats {
@@ -655,6 +789,21 @@
                 <div class="stat-card pending">
                     <div class="stat-number" id="pending-tasks">0</div>
                     <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-card notification" id="notification-card">
+                    <div class="stat-number" id="unread-notifications">0</div>
+                    <div class="stat-label">Notifications</div>
+                </div>
+            </div>
+
+            <!-- Notifications Panel -->
+            <div id="notifications-panel" class="notifications-panel" style="display: none;">
+                <div class="notifications-header">
+                    <h3>Notifications</h3>
+                    <button id="close-notifications" class="btn btn-sm btn-outline">×</button>
+                </div>
+                <div id="notifications-list" class="notifications-list">
+                    <div class="notification-loading">Loading notifications...</div>
                 </div>
             </div>
 
@@ -814,6 +963,17 @@
             const sortDirectionBtn = document.getElementById('sort-direction');
             const groupSelectElement = document.getElementById('group-select');
 
+            // Notification elements
+            const notificationCardElement = document.getElementById('notification-card');
+            const unreadNotificationsElement = document.getElementById('unread-notifications');
+            const notificationsPanelElement = document.getElementById('notifications-panel');
+            const notificationsListElement = document.getElementById('notifications-list');
+            const closeNotificationsBtn = document.getElementById('close-notifications');
+
+            // Notification data
+            let notifications = [];
+            let unreadCount = 0;
+
             // Status update modal elements
             const statusModal = document.getElementById('status-modal');
             const closeModalBtn = document.getElementById('close-modal');
@@ -827,6 +987,9 @@
 
             // Fetch data from API
             fetchDashboardData();
+
+            // Fetch notifications
+            fetchNotifications();
 
             // Add event listeners
             statusFilterElement.addEventListener('change', filterAndSortTasks);
@@ -870,6 +1033,15 @@
 
             groupSelectElement.addEventListener('change', function() {
                 filterAndSortTasks();
+            });
+
+            // Notification event listeners
+            notificationCardElement.addEventListener('click', function() {
+                toggleNotificationsPanel();
+            });
+
+            closeNotificationsBtn.addEventListener('click', function() {
+                notificationsPanelElement.style.display = 'none';
             });
 
             // Functions
@@ -943,6 +1115,149 @@
                 completedTasksElement.textContent = dashboardData.completed_tasks || 0;
                 inProgressTasksElement.textContent = dashboardData.in_progress_tasks || 0;
                 pendingTasksElement.textContent = dashboardData.pending_tasks || 0;
+            }
+
+            async function fetchNotifications() {
+                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                if (!token) return;
+
+                try {
+                    const response = await fetch('/api/tasks/notifications/', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch notifications');
+                    }
+
+                    notifications = await response.json();
+
+                    // Count unread notifications
+                    unreadCount = notifications.filter(n => !n.read).length;
+
+                    // Update notification badge
+                    updateNotificationBadge();
+
+                    // Render notifications if panel is open
+                    if (notificationsPanelElement.style.display === 'flex') {
+                        renderNotifications();
+                    }
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            }
+
+            function updateNotificationBadge() {
+                unreadNotificationsElement.textContent = unreadCount;
+
+                // Add or remove notification badge
+                if (unreadCount > 0) {
+                    // Add badge if it doesn't exist
+                    if (!notificationCardElement.querySelector('.notification-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'notification-badge';
+                        badge.textContent = unreadCount;
+                        notificationCardElement.appendChild(badge);
+                    } else {
+                        // Update existing badge
+                        notificationCardElement.querySelector('.notification-badge').textContent = unreadCount;
+                    }
+                } else {
+                    // Remove badge if it exists
+                    const badge = notificationCardElement.querySelector('.notification-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            }
+
+            function toggleNotificationsPanel() {
+                if (notificationsPanelElement.style.display === 'flex') {
+                    notificationsPanelElement.style.display = 'none';
+                } else {
+                    notificationsPanelElement.style.display = 'flex';
+                    renderNotifications();
+                }
+            }
+
+            function renderNotifications() {
+                if (notifications.length === 0) {
+                    notificationsListElement.innerHTML = `
+                        <div class="notification-item">
+                            <div class="notification-message">No notifications yet.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const notificationsHTML = notifications.map(notification => {
+                    const isUnread = !notification.read;
+                    const date = new Date(notification.created_at);
+                    const formattedDate = date.toLocaleString();
+
+                    return `
+                        <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${notification.id}">
+                            <div class="notification-header">
+                                <div class="notification-title">${notification.title}</div>
+                                <div class="notification-time">${formattedDate}</div>
+                            </div>
+                            <div class="notification-message">${notification.message}</div>
+                            <div class="notification-actions">
+                                ${notification.related_task ? `
+                                    <a href="/dashboard/tasks/${notification.related_task}/" class="notification-task-link">View Task</a>
+                                ` : ''}
+                                ${isUnread ? `
+                                    <button class="mark-read-btn" data-id="${notification.id}">Mark as read</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                notificationsListElement.innerHTML = notificationsHTML;
+
+                // Add event listeners to mark as read buttons
+                document.querySelectorAll('.mark-read-btn').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const notificationId = this.getAttribute('data-id');
+                        markNotificationAsRead(notificationId);
+                    });
+                });
+            }
+
+            async function markNotificationAsRead(notificationId) {
+                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                if (!token) return;
+
+                try {
+                    const response = await fetch(`/api/tasks/notifications/${notificationId}/read/`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to mark notification as read');
+                    }
+
+                    // Update local notification data
+                    const notificationIndex = notifications.findIndex(n => n.id == notificationId);
+                    if (notificationIndex !== -1) {
+                        notifications[notificationIndex].read = true;
+                        unreadCount = Math.max(0, unreadCount - 1);
+
+                        // Update UI
+                        updateNotificationBadge();
+                        renderNotifications();
+                    }
+                } catch (error) {
+                    console.error('Error marking notification as read:', error);
+                }
             }
 
             function renderTasks(tasks) {
@@ -1425,6 +1740,9 @@
 
                     // Show success message
                     alert('Task status updated successfully!');
+
+                    // Refresh notifications after updating task status
+                    fetchNotifications();
 
                 } catch (error) {
                     console.error('Error updating task status:', error);

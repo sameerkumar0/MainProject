@@ -507,7 +507,7 @@ class EmployeeDashboardAPIView(generics.RetrieveAPIView):
     Provides user profile information, task statistics, and assigned tasks.
     """
     serializer_class = DashboardSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsEmployee]
 
     def get_object(self):
         # Return the current user as the object to be serialized

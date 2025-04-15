@@ -1,9 +1,8 @@
-from rest_framework import generics, status, permissions,response
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from django.db import models
 from .serializers import EmployeeSerializer, LoginSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ManagerRegisterSerializer, ManagerDashboardSerializer, EmployeeTasksSerializer
 from notifications.email_services import send_email_notification
 from django.shortcuts import render
@@ -12,12 +11,9 @@ from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee
 from rest_framework.permissions import AllowAny
-from tasks.serializers import TaskSerializer
-from django.urls import reverse
-from tasks.models import TaskAssignment
-from django.utils import timezone
-from django.db.models import Count
-from rest_framework.permissions import IsAuthenticated
+
+
+
 
 
 User = get_user_model()
@@ -182,35 +178,44 @@ class ForgotPasswordView(generics.GenericAPIView):
         try:
             user = User.objects.get(email=email)
 
-            # Generate a temporary password
-            temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            # Generate a 6-digit OTP
+            otp = ''.join(random.choices(string.digits, k=6))
 
-            # Update user's password (hashed)
-            user.password = make_password(temp_password)
+            # Store OTP in session or cache (in a real app, you'd use Django's cache or session)
+            # For simplicity, we'll store it directly in the user model temporarily
+            # In a production environment, you should use a proper OTP storage mechanism
+            user.otp = otp
+            user.otp_valid_until = timezone.now() + timezone.timedelta(minutes=15)  # OTP valid for 15 minutes
             user.save()
 
-            # Create reset password link
-            reset_link = f"http://127.0.0.1:8000/api/users/reset-password-page/?email={email}"
+            # Create reset password link with email parameter
+            reset_link = f"http://127.0.0.1:8001/auth/reset-password/?email={email}"
 
-            # Send email with the temporary password and reset link
+            # Send email with OTP and reset link
             email_subject = "Password Reset Request"
             email_body = (
                 f"Hello {user.first_name},\n\n"
-                f"Your temporary password is: {temp_password}\n\n"
-                f"Use this password to log in and reset your password here:\n"
+                f"We received a request to reset your password. Your verification code is:\n\n"
+                f"OTP: {otp}\n\n"
+                f"Please use this code on the password reset page to verify your identity:\n"
                 f"{reset_link}\n\n"
-                f"Please reset your password immediately."
+                f"This code will expire in 15 minutes.\n\n"
+                f"If you did not request a password reset, please ignore this email."
             )
             send_email_notification(user.email, email_subject, email_body)
 
-            return Response({'message': 'Temporary password and reset link sent to your email.'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Password reset instructions sent to your email.'}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response({'error': 'User with this email does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+            # For security reasons, don't reveal whether the email exists or not
+            return Response({'message': 'If your email is registered, you will receive password reset instructions.'}, status=status.HTTP_200_OK)
 
 def reset_password_page(request):
     email = request.GET.get('email')
     return render(request, 'reset-password.html', {'email': email})
+
+def forgot_password_page(request):
+    return render(request, 'forgot-password.html')
 
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
@@ -220,6 +225,7 @@ class ResetPasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
         new_password = serializer.validated_data['password']
         confirm_password = serializer.validated_data['confirm_password']
 
@@ -229,8 +235,20 @@ class ResetPasswordView(generics.GenericAPIView):
         try:
             user = User.objects.get(email=email)
 
+            # Verify OTP
+            if not user.otp or user.otp != otp:
+                return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if OTP is expired
+            if not user.otp_valid_until or timezone.now() > user.otp_valid_until:
+                return Response({'error': 'Verification code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
             # Update user password
             user.password = make_password(new_password)
+
+            # Clear OTP fields after successful reset
+            user.otp = None
+            user.otp_valid_until = None
             user.save()
 
             return Response({'message': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
@@ -340,13 +358,13 @@ class ManagerDashboardAPIView(generics.RetrieveAPIView):
 
 @login_required
 def manager_employee_dashboard(request):
-    """View for the manager employee dashboard page."""
+    """View for the manager employee dashboard page with employee tasks."""
     # Check if the user is a manager
     if request.user.role != UserRoles.MANAGER:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("You are not authorized to view this page.")
 
-    return render(request, 'manager_dashboard.html')
+    return render(request, 'manager_employee_dashboard.html')
 
 
 def employee_tasks_view(request):
@@ -354,9 +372,9 @@ def employee_tasks_view(request):
     return render(request, 'employee_tasks_view.html')
 
 
-def simple_employee_tasks_view(request):
-    """Simple view for displaying all employees with their assigned tasks."""
-    return render(request, 'simple_employee_tasks.html')
+def manager_login_test(request):
+    """Test view for the manager login page."""
+    return render(request, 'manager_login_test.html')
 
 
 class EmployeeTasksAPIView(generics.ListAPIView):
