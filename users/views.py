@@ -4,9 +4,10 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.db import models
-from .serializers import EmployeeSerializer, LoginSerializer,ForgotPasswordSerializer,ResetPasswordSerializer,ManagerRegisterSerializer
+from .serializers import EmployeeSerializer, LoginSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ManagerRegisterSerializer, ManagerDashboardSerializer, EmployeeTasksSerializer
 from notifications.email_services import send_email_notification
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from tasks.models import Task
 from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee
@@ -129,7 +130,7 @@ class ManagerLoginView(generics.GenericAPIView):
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "role": user.role,
-            "redirect_url": "/dashboard/"
+            "redirect_url": "/auth/manager/employees/"
         }, status=status.HTTP_200_OK)
 
 
@@ -238,112 +239,6 @@ class ResetPasswordView(generics.GenericAPIView):
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
-# manager Dashboard
-
-
-class ManagerDashboardView(APIView):
-    permission_classes = [IsAuthenticated,IsManager]
-
-    def get(self, request):
-        user = request.user
-
-        # Ensure user is a manager
-        if user.role != UserRoles.MANAGER:
-            return Response({"error": "Access denied. Only managers can access this dashboard."}, status=403)
-
-        # Manager info
-        manager_data = {
-            "id": user.id,
-            "name": f"{user.first_name} {user.last_name}",
-            "email": user.email,
-            "profile_photo": request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
-            "phone_number": user.phone_number,
-        }
-
-        # Get all employees
-        employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE)
-        employees_data = []
-
-        for emp in employees:
-            emp_tasks = Task.objects.filter(assigned_to=emp, assigned_by=user)
-            completed_tasks = emp_tasks.filter(status="completed").count()
-
-            employees_data.append({
-                "id": emp.id,
-                "name": f"{emp.first_name} {emp.last_name}",
-                "username": emp.username,
-                "email": emp.email,
-                "department": emp.department.name if emp.department else None,
-                "tech_stack": [tech.strip() for tech in emp.tech_stack.split(",")] if emp.tech_stack else [],
-                "profile_photo": request.build_absolute_uri(emp.profile_photo.url) if emp.profile_photo else None,
-                "is_available": emp.is_available,
-                "phone_number": emp.phone_number,
-                "total_tasks": emp_tasks.count(),
-                "completed_tasks": completed_tasks,
-            })
-
-        # Upcoming deadlines (7 days)
-        today = timezone.now()
-        upcoming_tasks = Task.objects.filter(
-            assigned_by=user,
-            due_date__gte=today,
-            due_date__lte=today + timezone.timedelta(days=7)
-        ).order_by('due_date')
-
-        upcoming_deadlines = [
-            {
-                "title": task.title,
-                "due_date": task.due_date.strftime("%Y-%m-%d %H:%M"),
-                "assigned_to": f"{task.assigned_to.first_name} {task.assigned_to.last_name}",
-                "status": task.status,
-                "priority": task.priority
-            } for task in upcoming_tasks
-        ]
-
-        # Top performers (by completed tasks)
-        top_performers_query = CustomUser.objects.filter(
-            role=UserRoles.EMPLOYEE,
-            tasks__assigned_by=user,
-            tasks__status="completed"
-        ).annotate(completed=Count('tasks')).order_by('-completed')[:5]
-
-        top_performers = [
-            {
-                "id": emp.id,
-                "name": f"{emp.first_name} {emp.last_name}",
-                "completed_tasks": emp.completed,
-                "profile_photo": request.build_absolute_uri(emp.profile_photo.url) if emp.profile_photo else None,
-            }
-            for emp in top_performers_query
-        ]
-
-        # assignment history
-        assignments = TaskAssignment.objects.filter(
-            task__assigned_by=user
-        ).select_related('employee', 'task').order_by('-assigned_at')[:10]
-
-        assignment_history = [
-            {
-                "task": assign.task.title,
-                "employee": f"{assign.employee.first_name} {assign.employee.last_name}",
-                "assigned_at": assign.assigned_at.strftime("%Y-%m-%d %H:%M"),
-                "status": assign.task.status
-            }
-            for assign in assignments
-        ]
-
-        return Response({
-            "manager": manager_data,
-            "employees": employees_data,
-            "upcoming_deadlines": upcoming_deadlines,
-            "top_performers": top_performers,
-            "assignment_history": assignment_history
-        })
-
-
-
-def dashboard_Page(request):
-    return render(request,'manager_dashboard.html')
 
 #csrf handling
 from django.middleware.csrf import get_token
@@ -396,3 +291,78 @@ class EmployeeProfileView(APIView):
 
 def employee_profile(request):
     return render(request,'employee_profile.html')
+
+
+@login_required
+def employee_dashboard(request):
+    # Get the current employee (user)
+    employee = request.user
+
+    # Check if the user is an employee
+    if employee.role != UserRoles.EMPLOYEE:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("You are not authorized to view this page.")
+
+    # Get tasks assigned to the employee via TaskAssignment
+    tasks = Task.objects.filter(assignments__employee=employee)
+
+    # Calculate task statistics
+    total_tasks = tasks.count()
+    completed_tasks = tasks.filter(status='completed').count()
+    in_progress_tasks = tasks.filter(status='in_progress').count()
+    pending_tasks = tasks.filter(status__in=['pending', 'assigned']).count()
+
+    # Prepare context for the template
+    context = {
+        'employee': employee,
+        'task_stats': {
+            'total': total_tasks,
+            'completed': completed_tasks,
+            'in_progress': in_progress_tasks,
+            'pending': pending_tasks
+        }
+    }
+
+    return render(request, 'employee_dashboard.html', context)
+
+
+class ManagerDashboardAPIView(generics.RetrieveAPIView):
+    """
+    API endpoint for retrieving manager dashboard data.
+    Provides manager profile information, team statistics, and employee list with their tech stacks.
+    """
+    serializer_class = ManagerDashboardSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManager]
+
+    def get_object(self):
+        # Return the current user (manager) as the object to be serialized
+        return self.request.user
+
+@login_required
+def manager_employee_dashboard(request):
+    """View for the manager employee dashboard page."""
+    # Check if the user is a manager
+    if request.user.role != UserRoles.MANAGER:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("You are not authorized to view this page.")
+
+    return render(request, 'manager_dashboard.html')
+
+
+def employee_tasks_view(request):
+    """View for displaying all employees with their assigned tasks."""
+    return render(request, 'employee_tasks_view.html')
+
+
+def simple_employee_tasks_view(request):
+    """Simple view for displaying all employees with their assigned tasks."""
+    return render(request, 'simple_employee_tasks.html')
+
+
+class EmployeeTasksAPIView(generics.ListAPIView):
+    """API endpoint for retrieving all employees with their assigned tasks."""
+    serializer_class = EmployeeTasksSerializer
+
+    def get_queryset(self):
+        # Return all employees with role=Employee
+        return CustomUser.objects.filter(role=UserRoles.EMPLOYEE)

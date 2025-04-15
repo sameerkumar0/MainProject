@@ -7,6 +7,8 @@ from .views import (
     ForgotPasswordView, ResetPasswordView, LogoutView,
     # Employee API views
     EmployeeListView, EmployeeProfileView,
+    # Manager API views
+    ManagerDashboardAPIView, EmployeeTasksAPIView,
     # Utility API views
     get_csrf_token
 )
@@ -26,6 +28,10 @@ urlpatterns = [
     # Employee management API endpoints
     path('employees/', EmployeeListView.as_view(), name='employee_list_api'),
     path('employees/<int:pk>/profile/', EmployeeProfileView.as_view(), name='employee_profile_api'),
+
+    # Manager API endpoints
+    path('manager/dashboard/', ManagerDashboardAPIView.as_view(), name='manager_dashboard_api'),
+    path('employees/tasks/', EmployeeTasksAPIView.as_view(), name='employee_tasks_api'),
 
     # Utility API endpoints
     path('csrf/', get_csrf_token, name='csrf_token'),

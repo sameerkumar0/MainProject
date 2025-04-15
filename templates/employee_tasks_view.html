@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Tasks Overview</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --dark-color: #212121;
+            --light-color: #f8f9fa;
+            --gray-color: #6c757d;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: white;
+            box-shadow: var(--box-shadow);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent-color);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--dark-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--primary-color);
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .page-title {
+            margin: 30px 0;
+            color: var(--dark-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-weight: 500;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+            background-color: white;
+        }
+
+        .search-input {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            font-size: 0.9rem;
+            width: 250px;
+        }
+
+        .employee-section {
+            margin-bottom: 40px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+        }
+
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background-color: #f0f7ff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .employee-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .employee-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .employee-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .employee-email {
+            color: var(--gray-color);
+            font-size: 0.9rem;
+        }
+
+        .tech-stack {
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            margin-top: 5px;
+        }
+
+        .tech-stack-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .task-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .task-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .task-stat-number {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .task-stat-label {
+            font-size: 0.8rem;
+            color: var(--gray-color);
+        }
+
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .task-table th,
+        .task-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .task-table th {
+            font-weight: 600;
+            color: var(--dark-color);
+            background-color: #f9f9f9;
+        }
+
+        .task-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .task-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .task-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .task-status.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .task-status.assigned {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .task-status.in_progress {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .task-status.completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .task-priority {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .task-priority.low {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+
+        .task-priority.medium {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .task-priority.high {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .task-priority.urgent {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: var(--gray-color);
+            text-align: right;
+        }
+
+        .no-tasks {
+            padding: 20px;
+            text-align: center;
+            color: var(--gray-color);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(67, 97, 238, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--danger-color);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray-color);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .task-stats {
+                flex-wrap: wrap;
+            }
+
+            .task-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a href="/" class="logo">Task<span>Flow</span></a>
+            <nav class="nav-links">
+                <a href="/dashboard/tasks/">Tasks</a>
+                <a href="/dashboard/tasks/create/">Create Task</a>
+                <a href="/auth/manager/employees/">Employees</a>
+                <a href="/auth/logout/">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading employee tasks data...</p>
+        </div>
+
+        <div id="error-message" class="error-message" style="display: none;"></div>
+
+        <div id="dashboard-content" style="display: none;">
+            <div class="page-title">
+                <h1>Employee Tasks Overview</h1>
+                <a href="/dashboard/tasks/create/" class="btn btn-primary">Create New Task</a>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <input type="text" id="search-input" class="search-input" placeholder="Search employees or tasks...">
+                </div>
+                <div class="filter-group">
+                    <label for="status-filter" class="filter-label">Status:</label>
+                    <select id="status-filter" class="filter-select">
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="priority-filter" class="filter-label">Priority:</label>
+                    <select id="priority-filter" class="filter-select">
+                        <option value="all">All Priorities</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="employee-tasks-container">
+                <!-- Employee sections with their tasks will be inserted here -->
+            </div>
+
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">👥</div>
+                <h3>No employees found</h3>
+                <p>There are no employees registered in the system.</p>
+                <p style="margin-top: 20px;">
+                    <a href="/api/users/employees/tasks/" target="_blank" class="btn btn-outline">Check API Endpoint</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get DOM elements
+            const loadingElement = document.getElementById('loading');
+            const errorMessageElement = document.getElementById('error-message');
+            const dashboardContentElement = document.getElementById('dashboard-content');
+            const employeeTasksContainer = document.getElementById('employee-tasks-container');
+            const emptyStateElement = document.getElementById('empty-state');
+            const searchInput = document.getElementById('search-input');
+            const statusFilter = document.getElementById('status-filter');
+            const priorityFilter = document.getElementById('priority-filter');
+
+            // Store all employee data
+            let allEmployeesData = [];
+
+            // Fetch data
+            fetchEmployeeTasksData();
+
+            // Event listeners for filters
+            searchInput.addEventListener('input', filterEmployeeTasks);
+            statusFilter.addEventListener('change', filterEmployeeTasks);
+            priorityFilter.addEventListener('change', filterEmployeeTasks);
+
+            // Functions
+            async function fetchEmployeeTasksData() {
+                // No token check for simplicity
+
+                try {
+                    // For debugging - show a message in the console
+                    console.log('Fetching employee tasks data...');
+
+                    // Fetch employee tasks data without authentication
+                    const response = await fetch('/api/users/employees/tasks/');
+
+                    // For debugging - log the response
+                    console.log('Response status:', response.status);
+
+                    if (response.status === 401) {
+                        showError('Your session has expired. Please login again.');
+                        setTimeout(() => {
+                            window.location.href = '/auth/login/manager/';
+                        }, 2000);
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch employee tasks data');
+                    }
+
+                    const data = await response.json();
+                    console.log('API response data:', data);
+
+                    // Check if we have data
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        allEmployeesData = data;
+
+                        // Render employee tasks
+                        renderEmployeeTasks(data);
+                    } else {
+                        // No data or empty array
+                        console.log('No employee data found');
+                        employeeTasksContainer.style.display = 'none';
+                        emptyStateElement.style.display = 'block';
+                    }
+
+                    // Show dashboard content
+                    loadingElement.style.display = 'none';
+                    dashboardContentElement.style.display = 'block';
+                } catch (error) {
+                    console.error('Error fetching employee tasks data:', error);
+                    showError('Failed to load employee tasks data. Please try again later.');
+                }
+            }
+
+            function renderEmployeeTasks(employees) {
+                console.log('Rendering employees:', employees);
+
+                if (!employees || employees.length === 0) {
+                    console.log('No employees to render');
+                    employeeTasksContainer.style.display = 'none';
+                    emptyStateElement.style.display = 'block';
+                    return;
+                }
+
+                console.log('Found ' + employees.length + ' employees to render');
+                employeeTasksContainer.style.display = 'block';
+                emptyStateElement.style.display = 'none';
+                employeeTasksContainer.innerHTML = '';
+
+                employees.forEach(employee => {
+                    const section = createEmployeeSection(employee);
+                    employeeTasksContainer.appendChild(section);
+                });
+            }
+
+            function createEmployeeSection(employee) {
+                console.log('Creating section for employee:', employee);
+
+                const section = document.createElement('div');
+                section.className = 'employee-section';
+                section.dataset.employeeId = employee.id;
+
+                // Get initials for avatar
+                const initials = getInitials(employee.first_name, employee.last_name);
+
+                // Format tech stack
+                const techStack = employee.tech_stack || 'Not specified';
+
+                // Create employee header
+                const header = document.createElement('div');
+                header.className = 'employee-header';
+                header.innerHTML = `
+                    <div class="employee-info">
+                        <div class="employee-avatar">${initials}</div>
+                        <div>
+                            <div class="employee-name">${employee.first_name} ${employee.last_name}</div>
+                            <div class="employee-email">${employee.email}</div>
+                            <div class="tech-stack"><span class="tech-stack-label">Tech Stack:</span> ${techStack}</div>
+                        </div>
+                    </div>
+                    <div class="task-stats">
+                        <div class="task-stat">
+                            <div class="task-stat-number">${employee.task_counts?.total || 0}</div>
+                            <div class="task-stat-label">Total</div>
+                        </div>
+                        <div class="task-stat">
+                            <div class="task-stat-number">${employee.task_counts?.completed || 0}</div>
+                            <div class="task-stat-label">Completed</div>
+                        </div>
+                        <div class="task-stat">
+                            <div class="task-stat-number">${employee.task_counts?.in_progress || 0}</div>
+                            <div class="task-stat-label">In Progress</div>
+                        </div>
+                        <div class="task-stat">
+                            <div class="task-stat-number">${employee.task_counts?.pending || 0}</div>
+                            <div class="task-stat-label">Pending</div>
+                        </div>
+                    </div>
+                `;
+
+                section.appendChild(header);
+
+                // Create tasks table
+                const tasks = employee.tasks || [];
+                if (tasks.length === 0) {
+                    const noTasks = document.createElement('div');
+                    noTasks.className = 'no-tasks';
+                    noTasks.textContent = 'No tasks assigned to this employee.';
+                    section.appendChild(noTasks);
+                } else {
+                    const table = document.createElement('table');
+                    table.className = 'task-table';
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Due Date</th>
+                                <th>Progress</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tasks.map(task => createTaskRow(task)).join('')}
+                        </tbody>
+                    `;
+                    section.appendChild(table);
+                }
+
+                return section;
+            }
+
+            function createTaskRow(task) {
+                // Format due date
+                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+
+                // Get progress value
+                const progress = task.progress || 0;
+
+                // Create description with truncation
+                const description = task.description ? truncateText(task.description, 50) : 'No description';
+
+                return `
+                    <tr data-task-id="${task.id}" data-status="${task.status}" data-priority="${task.priority}">
+                        <td>${escapeHtml(task.title)}</td>
+                        <td>${escapeHtml(description)}</td>
+                        <td>
+                            <span class="task-priority ${task.priority}">${capitalizeFirstLetter(task.priority)}</span>
+                        </td>
+                        <td>
+                            <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
+                        </td>
+                        <td>${dueDate}</td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <div class="progress-text">${progress}%</div>
+                        </td>
+                        <td>
+                            <a href="/dashboard/tasks/${task.id}/" class="btn btn-outline btn-sm">View</a>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            function filterEmployeeTasks() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusValue = statusFilter.value;
+                const priorityValue = priorityFilter.value;
+
+                // Clone the original data to avoid modifying it
+                let filteredEmployees = JSON.parse(JSON.stringify(allEmployeesData));
+
+                // Filter employees by search term
+                if (searchTerm) {
+                    filteredEmployees = filteredEmployees.filter(employee => {
+                        const employeeMatches =
+                            employee.first_name.toLowerCase().includes(searchTerm) ||
+                            employee.last_name.toLowerCase().includes(searchTerm) ||
+                            employee.email.toLowerCase().includes(searchTerm) ||
+                            (employee.tech_stack && employee.tech_stack.toLowerCase().includes(searchTerm));
+
+                        // Filter tasks within this employee
+                        if (employee.tasks) {
+                            employee.tasks = employee.tasks.filter(task =>
+                                task.title.toLowerCase().includes(searchTerm) ||
+                                task.description.toLowerCase().includes(searchTerm)
+                            );
+                        }
+
+                        // Include employee if either the employee matches or they have matching tasks
+                        return employeeMatches || (employee.tasks && employee.tasks.length > 0);
+                    });
+                }
+
+                // Filter tasks by status and priority
+                filteredEmployees.forEach(employee => {
+                    if (employee.tasks) {
+                        employee.tasks = employee.tasks.filter(task => {
+                            const statusMatches = statusValue === 'all' || task.status === statusValue;
+                            const priorityMatches = priorityValue === 'all' || task.priority === priorityValue;
+                            return statusMatches && priorityMatches;
+                        });
+                    }
+                });
+
+                // Remove employees with no matching tasks
+                filteredEmployees = filteredEmployees.filter(employee =>
+                    employee.tasks && employee.tasks.length > 0
+                );
+
+                // Render the filtered data
+                renderEmployeeTasks(filteredEmployees);
+            }
+
+            function showError(message) {
+                loadingElement.style.display = 'none';
+                errorMessageElement.textContent = message;
+                errorMessageElement.style.display = 'block';
+            }
+
+            // Helper functions
+            function getInitials(firstName, lastName) {
+                const firstInitial = firstName ? firstName.charAt(0) : '';
+                const lastInitial = lastName ? lastName.charAt(0) : '';
+                return (firstInitial + lastInitial).toUpperCase();
+            }
+
+            function truncateText(text, maxLength) {
+                if (text.length <= maxLength) return text;
+                return text.substring(0, maxLength) + '...';
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            function capitalizeFirstLetter(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+
+            function formatStatus(status) {
+                return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+        });
+    </script>
+</body>
+</html>

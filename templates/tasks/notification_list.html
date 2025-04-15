@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <!-- Logo/Brand -->
+      <div class="text-2xl font-semibold text-blue-600">
+        Task Manager
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="flex items-center gap-6">
+        <a href="{% url 'create_task' %}" class="text-gray-700 hover:text-blue-600 font-medium">Create Task</a>
+        <a href="{% url 'task-assign' %}" class="text-gray-700 hover:text-blue-600 font-medium">Assign Task</a>
+        <a href="{% url 'task_list' %}" class="text-gray-700 hover:text-blue-600 font-medium">All Tasks</a>
+      </div>
+
+      <!-- Profile Section -->
+      <div class="flex items-center space-x-3">
+        {% if request.user.profile_photo %}
+          <img src="{{ request.user.profile_photo.url }}" alt="Profile Photo"
+               class="w-10 h-10 rounded-full object-cover">
+        {% else %}
+          <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+            {{ request.user.first_name|default:request.user.username|slice:":1" }}
+          </div>
+        {% endif %}
+        <span class="text-gray-800 font-semibold">{{ request.user.first_name }} {{ request.user.last_name }}</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto mt-8 px-4 pb-12">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">Notifications</h2>
+      <button id="mark-all-read" class="text-blue-600 hover:text-blue-800 font-medium">Mark All as Read</button>
+    </div>
+
+    <!-- Notification Filters -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+      <div class="p-4 flex flex-wrap gap-2">
+        <button class="filter-btn px-4 py-2 rounded-md bg-blue-600 text-white" data-filter="all">
+          All
+        </button>
+        <button class="filter-btn px-4 py-2 rounded-md bg-gray-200 text-gray-800" data-filter="unread">
+          Unread
+        </button>
+        <button class="filter-btn px-4 py-2 rounded-md bg-gray-200 text-gray-800" data-filter="task_assigned">
+          Task Assigned
+        </button>
+        <button class="filter-btn px-4 py-2 rounded-md bg-gray-200 text-gray-800" data-filter="task_updated">
+          Task Updated
+        </button>
+        <button class="filter-btn px-4 py-2 rounded-md bg-gray-200 text-gray-800" data-filter="task_completed">
+          Task Completed
+        </button>
+      </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div id="notifications-container" class="divide-y divide-gray-200">
+        <div class="p-6 animate-pulse">
+          <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div class="h-3 bg-gray-200 rounded w-1/3 mt-3"></div>
+        </div>
+        <div class="p-6 animate-pulse">
+          <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div class="h-3 bg-gray-200 rounded w-1/3 mt-3"></div>
+        </div>
+        <div class="p-6 animate-pulse">
+          <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div class="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+          <div class="h-3 bg-gray-200 rounded w-1/3 mt-3"></div>
+        </div>
+      </div>
+      
+      <!-- Empty State -->
+      <div id="empty-state" class="p-12 text-center hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <h3 class="text-lg font-medium text-gray-900 mb-1">No notifications found</h3>
+        <p class="text-gray-500">You're all caught up!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const notificationsContainer = document.getElementById('notifications-container');
+    const emptyState = document.getElementById('empty-state');
+    const markAllReadBtn = document.getElementById('mark-all-read');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    
+    // Current filter
+    let currentFilter = 'all';
+    
+    // Fetch notifications
+    async function fetchNotifications() {
+      try {
+        const response = await fetch('/api/notifications/', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access')}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch notifications');
+        
+        const notifications = await response.json();
+        displayNotifications(notifications);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        notificationsContainer.innerHTML = `
+          <div class="p-6 text-red-500">
+            Error loading notifications. Please try again later.
+          </div>
+        `;
+      }
+    }
+
+    // Display notifications
+    function displayNotifications(notifications) {
+      // Filter notifications based on current filter
+      let filteredNotifications = notifications;
+      
+      if (currentFilter === 'unread') {
+        filteredNotifications = notifications.filter(notification => !notification.read);
+      } else if (currentFilter !== 'all') {
+        filteredNotifications = notifications.filter(notification => notification.notification_type === currentFilter);
+      }
+      
+      // Show empty state if no notifications
+      if (filteredNotifications.length === 0) {
+        notificationsContainer.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      // Hide empty state and show notifications
+      notificationsContainer.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      
+      // Generate HTML for notifications
+      const notificationsHTML = filteredNotifications.map(notification => {
+        const notificationTypeIcons = {
+          'task_assigned': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>`,
+          'task_updated': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>`,
+          'task_completed': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>`,
+          'default': `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>`
+        };
+        
+        const icon = notificationTypeIcons[notification.notification_type] || notificationTypeIcons.default;
+        
+        return `
+          <div class="p-6 ${notification.read ? 'bg-white' : 'bg-blue-50'}" data-id="${notification.id}">
+            <div class="flex">
+              <div class="flex-shrink-0 mr-3">
+                ${icon}
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start">
+                  <h3 class="text-sm font-medium text-gray-900">${notification.title}</h3>
+                  ${!notification.read ? `
+                    <button class="mark-read-btn text-xs text-blue-600 hover:text-blue-800" data-id="${notification.id}">
+                      Mark as read
+                    </button>
+                  ` : ''}
+                </div>
+                <p class="text-sm text-gray-600 mt-1">${notification.message}</p>
+                <p class="text-xs text-gray-500 mt-2">${new Date(notification.created_at).toLocaleString()}</p>
+                ${notification.related_task ? `
+                  <a href="/tasks/${notification.related_task}/" class="inline-flex items-center mt-3 text-xs text-blue-600 hover:text-blue-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    View Task
+                  </a>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      notificationsContainer.innerHTML = notificationsHTML;
+      
+      // Add event listeners to mark as read buttons
+      document.querySelectorAll('.mark-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const notificationId = this.getAttribute('data-id');
+          markAsRead(notificationId);
+        });
+      });
+    }
+
+    // Mark notification as read
+    async function markAsRead(notificationId) {
+      try {
+        const response = await fetch(`/api/notifications/${notificationId}/mark-read/`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to mark notification as read');
+        
+        // Update UI
+        const notification = document.querySelector(`[data-id="${notificationId}"]`);
+        notification.classList.remove('bg-blue-50');
+        notification.classList.add('bg-white');
+        
+        const markReadBtn = notification.querySelector('.mark-read-btn');
+        if (markReadBtn) markReadBtn.remove();
+        
+        // Refresh notifications
+        fetchNotifications();
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to mark notification as read. Please try again.');
+      }
+    }
+
+    // Mark all notifications as read
+    async function markAllAsRead() {
+      try {
+        // Get all unread notification IDs
+        const unreadButtons = document.querySelectorAll('.mark-read-btn');
+        const unreadIds = Array.from(unreadButtons).map(btn => btn.getAttribute('data-id'));
+        
+        if (unreadIds.length === 0) {
+          alert('No unread notifications.');
+          return;
+        }
+        
+        // Mark each notification as read
+        const promises = unreadIds.map(id => 
+          fetch(`/api/notifications/${id}/mark-read/`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access')}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        );
+        
+        await Promise.all(promises);
+        
+        // Refresh notifications
+        fetchNotifications();
+        
+        alert('All notifications marked as read.');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to mark all notifications as read. Please try again.');
+      }
+    }
+
+    // Filter notifications
+    function filterNotifications(filter) {
+      currentFilter = filter;
+      
+      // Update active filter button
+      filterButtons.forEach(button => {
+        if (button.getAttribute('data-filter') === filter) {
+          button.classList.remove('bg-gray-200', 'text-gray-800');
+          button.classList.add('bg-blue-600', 'text-white');
+        } else {
+          button.classList.remove('bg-blue-600', 'text-white');
+          button.classList.add('bg-gray-200', 'text-gray-800');
+        }
+      });
+      
+      // Refresh notifications with filter
+      fetchNotifications();
+    }
+
+    // Add event listeners
+    markAllReadBtn.addEventListener('click', markAllAsRead);
+    
+    filterButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const filter = this.getAttribute('data-filter');
+        filterNotifications(filter);
+      });
+    });
+
+    // Initialize
+    fetchNotifications();
+  </script>
+</body>
+</html>

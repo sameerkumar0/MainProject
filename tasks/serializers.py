@@ -3,6 +3,7 @@ from .models import Task, TaskAssignment, TaskProgress, Notification, UserActivi
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Count, Q
 
 User = get_user_model()
 
@@ -27,7 +28,7 @@ class TaskSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'assigned_to', 'assigned_to_name',
                   'assigned_by', 'assigned_by_name', 'status', 'priority', 'document',
                   'created_at', 'due_date', 'assigned_at', 'progress', 'days_remaining', 'is_overdue',
-                  'start_date', 'completed_at', 'tags', 'time_remaining']
+                  'start_date', 'completed_at', 'time_remaining']
         read_only_fields = ['assigned_by', 'created_at', 'progress', 'assigned_at', 'start_date', 'completed_at']
 
     def validate(self, data):
@@ -114,69 +115,56 @@ class UserActivitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserActivity
-        fields = ['id', 'user', 'user_name', 'activity_type', 'description',
+        fields = ['id', 'user', 'username', 'activity_type', 'description',
                  'related_task', 'task_title', 'created_at']
         read_only_fields = ['created_at']
 
 
-class TaskMetricsSerializer(serializers.Serializer):
-    """Serializer for task metrics shown on the dashboard."""
-    total = serializers.IntegerField()
-    pending = serializers.IntegerField()
-    in_progress = serializers.IntegerField()
-    completed = serializers.IntegerField()
-    overdue = serializers.IntegerField()
-    due_today = serializers.IntegerField()
-    due_this_week = serializers.IntegerField()
-    completion_rate = serializers.FloatField()
+class DashboardSerializer(serializers.Serializer):
+    """Serializer for the employee dashboard data.
+    Provides user profile information, task statistics, and assigned tasks.
+    """
+    # User profile information
+    user_id = serializers.IntegerField(source='id')
+    username = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+    profile_photo = serializers.ImageField(read_only=True)
+    tech_stack = serializers.CharField(allow_null=True, required=False)
 
+    # Task statistics
+    total_tasks = serializers.IntegerField(read_only=True)
+    completed_tasks = serializers.IntegerField(read_only=True)
+    in_progress_tasks = serializers.IntegerField(read_only=True)
+    pending_tasks = serializers.IntegerField(read_only=True)
+    overdue_tasks = serializers.IntegerField(read_only=True)
 
-class CalendarTaskSerializer(serializers.ModelSerializer):
-    """Serializer for tasks shown in the calendar view."""
-    assigned_to_name = serializers.CharField(source="assigned_to.username", read_only=True)
+    # Tasks data
+    assigned_tasks = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Task
-        fields = ['id', 'title', 'status', 'priority', 'due_date', 'progress', 'assigned_to_name']
+    def get_assigned_tasks(self, user):
+        # Get tasks assigned to the user
+        tasks = Task.objects.filter(
+            assignments__employee=user
+        ).select_related('assigned_by').order_by('due_date')
 
+        return TaskSerializer(tasks, many=True).data
 
-class EmployeeDashboardSerializer(serializers.Serializer):
-    """Main serializer for the employee dashboard."""
-    user = serializers.DictField()
-    metrics = TaskMetricsSerializer()
-    priority_tasks = TaskSerializer(many=True)
-    recent_activities = UserActivitySerializer(many=True)
-    recent_progress = TaskProgressSerializer(many=True)
-    calendar_tasks = serializers.DictField(child=CalendarTaskSerializer(many=True))
-    recent_notifications = NotificationSerializer(many=True)
-    all_tasks = TaskSerializer(many=True, required=False)  # Added all tasks field
+    def to_representation(self, instance):
+        # Get the base representation
+        data = super().to_representation(instance)
 
+        # Calculate task statistics
+        tasks = Task.objects.filter(assignments__employee=instance)
+        data['total_tasks'] = tasks.count()
+        data['completed_tasks'] = tasks.filter(status='completed').count()
+        data['in_progress_tasks'] = tasks.filter(status='in_progress').count()
+        data['pending_tasks'] = tasks.filter(status__in=['pending', 'assigned']).count()
+        data['overdue_tasks'] = tasks.filter(
+            due_date__lt=timezone.now(),
+            status__in=['pending', 'in_progress']
+        ).count()
 
-class EmployeePerformanceSerializer(serializers.Serializer):
-    """Serializer for employee performance metrics."""
-    employee = UserSerializer()
-    total_tasks = serializers.IntegerField()
-    completed_tasks = serializers.IntegerField()
-    overdue_tasks = serializers.IntegerField()
-    completion_rate = serializers.FloatField()
-    average_completion_time = serializers.FloatField(required=False)
+        return data
 
-
-class EmployeeWorkloadSerializer(serializers.Serializer):
-    """Serializer for employee workload metrics."""
-    employee = UserSerializer()
-    pending_tasks = serializers.IntegerField()
-    in_progress_tasks = serializers.IntegerField()
-    total_active_tasks = serializers.IntegerField()
-    upcoming_deadlines = serializers.IntegerField()
-
-
-class ManagerDashboardSerializer(serializers.Serializer):
-    """Main serializer for the manager dashboard."""
-    team_metrics = TaskMetricsSerializer()
-    employee_performance = EmployeePerformanceSerializer(many=True)
-    employee_workload = EmployeeWorkloadSerializer(many=True)
-    unassigned_tasks = TaskSerializer(many=True)
-    recent_activities = UserActivitySerializer(many=True)
-    overdue_tasks = TaskSerializer(many=True)
-    calendar_tasks = serializers.DictField(child=CalendarTaskSerializer(many=True))

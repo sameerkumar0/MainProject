@@ -7,7 +7,8 @@ from .views import (
     register_manager, register_emp,
     emp_login_page, manager_login_page,
     list_employee, logout_view,
-    reset_password_page, employee_profile
+    reset_password_page, employee_profile,
+    manager_employee_dashboard, employee_tasks_view
 )
 
 urlpatterns = [
@@ -22,5 +23,9 @@ urlpatterns = [
     # Employee management pages
     path('employees/', list_employee, name='list_employees'),
     path('employees/<int:pk>/profile/', employee_profile, name='employee_profile'),
+
+    # Manager dashboard pages
+    path('manager/employees/', manager_employee_dashboard, name='manager_employee_dashboard'),
+    path('manager/employee-tasks/', employee_tasks_view, name='employee_tasks_view'),
 
 ]

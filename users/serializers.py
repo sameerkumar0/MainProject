@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 from .models import CustomUser, UserRoles, Department
 from django.contrib.auth import authenticate
 
@@ -197,3 +198,90 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class ManagerDashboardSerializer(serializers.Serializer):
+    """Serializer for the manager dashboard data.
+    Provides manager profile information, team statistics, and employee list with their tech stacks.
+    """
+    # Manager profile information
+    user_id = serializers.IntegerField(source='id')
+    username = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    email = serializers.CharField()
+    profile_photo = serializers.ImageField(read_only=True)
+
+    # Team statistics
+    team_size = serializers.SerializerMethodField()
+    total_tasks = serializers.SerializerMethodField()
+    completed_tasks = serializers.SerializerMethodField()
+    in_progress_tasks = serializers.SerializerMethodField()
+    pending_tasks = serializers.SerializerMethodField()
+
+    # Employee data
+    employees = serializers.SerializerMethodField()
+    unassigned_tasks = serializers.SerializerMethodField()
+
+    def get_team_size(self, manager):
+        return CustomUser.objects.filter(manager=manager, role=UserRoles.EMPLOYEE).count()
+
+    def get_total_tasks(self, manager):
+        from tasks.models import Task
+        return Task.objects.filter(assigned_by=manager).count()
+
+    def get_completed_tasks(self, manager):
+        from tasks.models import Task
+        return Task.objects.filter(assigned_by=manager, status='completed').count()
+
+    def get_in_progress_tasks(self, manager):
+        from tasks.models import Task
+        return Task.objects.filter(assigned_by=manager, status='in_progress').count()
+
+    def get_pending_tasks(self, manager):
+        from tasks.models import Task
+        return Task.objects.filter(assigned_by=manager, status__in=['pending', 'assigned']).count()
+
+    def get_employees(self, manager):
+        # Get all employees, not just those assigned to this manager
+        employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE)
+        return EmployeeListSerializer(employees, many=True).data
+
+    def get_unassigned_tasks(self, manager):
+        from tasks.models import Task
+        from tasks.serializers import TaskSerializer
+        unassigned_tasks = Task.objects.filter(assigned_by=manager, assignments__isnull=True)
+        return TaskSerializer(unassigned_tasks, many=True).data
+
+
+class EmployeeTasksSerializer(serializers.ModelSerializer):
+    """Serializer for displaying employees with their assigned tasks."""
+    tasks = serializers.SerializerMethodField()
+    task_counts = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email',
+            'tech_stack', 'profile_photo', 'tasks', 'task_counts'
+        ]
+
+    def get_tasks(self, employee):
+        from tasks.models import Task
+        from tasks.serializers import TaskSerializer
+        tasks = Task.objects.filter(assignments__employee=employee).select_related('assigned_by')
+        return TaskSerializer(tasks, many=True).data
+
+    def get_task_counts(self, employee):
+        from tasks.models import Task
+        tasks = Task.objects.filter(assignments__employee=employee)
+        return {
+            'total': tasks.count(),
+            'completed': tasks.filter(status='completed').count(),
+            'in_progress': tasks.filter(status='in_progress').count(),
+            'pending': tasks.filter(status__in=['pending', 'assigned']).count(),
+            'overdue': tasks.filter(
+                due_date__lt=timezone.now(),
+                status__in=['pending', 'in_progress']
+            ).count()
+        }
