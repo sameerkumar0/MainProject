@@ -669,24 +669,30 @@
             }
 
             function createTaskRow(task) {
-                // Format due date
-                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+                // Debug: Log the task object to see its structure
+                console.log('Task data in employee_tasks_view:', task);
 
-                // Get progress value
+                // Ensure we have valid data for each field
+                const id = task.id || 0;
+                const title = task.title || 'No title';
+                const description = task.description ? truncateText(task.description, 50) : 'No description';
+                const status = task.status || 'pending';
+                const priority = task.priority || 'medium';
+                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
                 const progress = task.progress || 0;
 
-                // Create description with truncation
-                const description = task.description ? truncateText(task.description, 50) : 'No description';
+                // Debug: Log the extracted values
+                console.log('Extracted values:', { id, title, description, status, priority, dueDate, progress });
 
                 return `
-                    <tr data-task-id="${task.id}" data-status="${task.status}" data-priority="${task.priority}">
-                        <td>${escapeHtml(task.title)}</td>
+                    <tr data-task-id="${id}" data-status="${status}" data-priority="${priority}">
+                        <td>${escapeHtml(title)}</td>
                         <td>${escapeHtml(description)}</td>
                         <td>
-                            <span class="task-priority ${task.priority}">${capitalizeFirstLetter(task.priority)}</span>
+                            <span class="task-priority ${priority}">${capitalizeFirstLetter(priority)}</span>
                         </td>
                         <td>
-                            <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
+                            <span class="task-status ${status}">${formatStatus(status)}</span>
                         </td>
                         <td>${dueDate}</td>
                         <td>
@@ -696,7 +702,7 @@
                             <div class="progress-text">${progress}%</div>
                         </td>
                         <td>
-                            <a href="/dashboard/tasks/${task.id}/" class="btn btn-outline btn-sm">View</a>
+                            <a href="/dashboard/tasks/${id}/" class="btn btn-outline btn-sm">View</a>
                         </td>
                     </tr>
                 `;

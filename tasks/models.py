@@ -253,12 +253,9 @@ class UserActivity(models.Model):
     Model for tracking user activity for the dashboard.
     """
     ACTIVITY_TYPES = [
-        ('login', 'User Login'),
-        ('task_created', 'Task Created'),
         ('task_assigned', 'Task Assigned'),
         ('task_updated', 'Task Updated'),
         ('progress_updated', 'Progress Updated'),
-        ('comment_added', 'Comment Added'),
         ('task_completed', 'Task Completed'),
     ]
 

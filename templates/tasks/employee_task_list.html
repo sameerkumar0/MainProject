@@ -85,18 +85,34 @@
           taskTableBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
         }
 
+        // Debug: Log the tasks data
+        console.log('Tasks data in employee_task_list:', tasks);
+
         tasks.forEach(task => {
+          // Debug: Log each task
+          console.log('Processing task:', task);
+
           const tr = document.createElement('tr');
 
-          if (task.priority === 'urgent') tr.classList.add('urgent-priority');
-          else if (task.priority === 'high') tr.classList.add('high-priority');
+          // Ensure we have valid data for each field
+          const title = task.title || 'No title';
+          const description = task.description || 'No description';
+          const status = task.status || 'pending';
+          const priority = task.priority || 'medium';
+          const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : '-';
+
+          // Debug: Log the extracted values
+          console.log('Extracted values:', { title, description, status, priority, dueDate });
+
+          if (priority === 'urgent') tr.classList.add('urgent-priority');
+          else if (priority === 'high') tr.classList.add('high-priority');
 
           tr.innerHTML = `
-            <td>${task.title}</td>
-            <td>${task.description}</td>
-            <td>${task.status}</td>
-            <td>${task.priority}</td>
-            <td>${task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</td>
+            <td>${title}</td>
+            <td>${description}</td>
+            <td>${status}</td>
+            <td>${priority}</td>
+            <td>${dueDate}</td>
           `;
           taskTableBody.appendChild(tr);
         });

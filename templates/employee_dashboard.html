@@ -865,8 +865,8 @@
                             <th>Title</th>
                             <th>Description</th>
                             <th>Priority</th>
-                            <th>Due Date</th>
                             <th>Status</th>
+                            <th>Due Date</th>
                             <th>Progress</th>
                             <th>Actions</th>
                         </tr>
@@ -888,42 +888,7 @@
         </div>
     </div>
 
-    <!-- Task Status Update Modal -->
-    <div id="status-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="background-color: white; margin: 10% auto; padding: 20px; width: 500px; max-width: 90%; border-radius: var(--border-radius); box-shadow: var(--box-shadow);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-                <h2 style="margin: 0; font-size: 1.2rem;">Update Task Status</h2>
-                <span id="close-modal" style="cursor: pointer; font-size: 1.5rem;">&times;</span>
-            </div>
-            <form id="status-update-form">
-                <input type="hidden" id="task-id">
-                <div style="margin-bottom: 15px;">
-                    <label for="task-title" style="display: block; margin-bottom: 5px; font-weight: 500;">Task:</label>
-                    <div id="task-title" style="padding: 10px; background-color: #f5f7fa; border-radius: var(--border-radius);"></div>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label for="status-select" style="display: block; margin-bottom: 5px; font-weight: 500;">Status:</label>
-                    <select id="status-select" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--border-radius); font-size: 0.9rem;">
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label for="progress-input" style="display: block; margin-bottom: 5px; font-weight: 500;">Progress (%):</label>
-                    <input type="number" id="progress-input" min="0" max="100" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--border-radius); font-size: 0.9rem;">
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label for="notes-input" style="display: block; margin-bottom: 5px; font-weight: 500;">What are you working on? (Notes):</label>
-                    <textarea id="notes-input" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: var(--border-radius); font-size: 0.9rem; resize: vertical;"></textarea>
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button type="button" id="cancel-btn" class="btn btn-outline">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </div>
-            </form>
-        </div>
-    </div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -974,16 +939,7 @@
             let notifications = [];
             let unreadCount = 0;
 
-            // Status update modal elements
-            const statusModal = document.getElementById('status-modal');
-            const closeModalBtn = document.getElementById('close-modal');
-            const cancelBtn = document.getElementById('cancel-btn');
-            const statusUpdateForm = document.getElementById('status-update-form');
-            const taskIdInput = document.getElementById('task-id');
-            const taskTitleDisplay = document.getElementById('task-title');
-            const statusSelect = document.getElementById('status-select');
-            const progressInput = document.getElementById('progress-input');
-            const notesInput = document.getElementById('notes-input');
+
 
             // Fetch data from API
             fetchDashboardData();
@@ -995,27 +951,7 @@
             statusFilterElement.addEventListener('change', filterAndSortTasks);
             priorityFilterElement.addEventListener('change', filterAndSortTasks);
 
-            // Modal event listeners
-            closeModalBtn.addEventListener('click', closeModal);
-            cancelBtn.addEventListener('click', closeModal);
-            statusUpdateForm.addEventListener('submit', handleStatusUpdate);
 
-            // Close modal if clicked outside
-            window.addEventListener('click', function(event) {
-                if (event.target === statusModal) {
-                    closeModal();
-                }
-            });
-
-            // Status change event listener
-            statusSelect.addEventListener('change', function() {
-                // Auto-adjust progress based on status
-                if (statusSelect.value === 'completed') {
-                    progressInput.value = 100;
-                } else if (statusSelect.value === 'in_progress' && parseInt(progressInput.value) === 0) {
-                    progressInput.value = 10;
-                }
-            });
 
             // New feature event listeners
             taskSearchInput.addEventListener('input', filterAndSortTasks);
@@ -1469,10 +1405,10 @@
                     <td>
                         <span class="task-priority ${task.priority}">${capitalizeFirstLetter(task.priority)}</span>
                     </td>
-                    <td><span class="due-date ${dueDateClass}">${formattedDate}</span></td>
                     <td>
                         <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
                     </td>
+                    <td><span class="due-date ${dueDateClass}">${formattedDate}</span></td>
                     <td>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progress}%"></div>
@@ -1481,19 +1417,8 @@
                     </td>
                     <td class="task-actions">
                         <a href="/dashboard/tasks/${task.id}/" class="btn btn-outline btn-sm">View</a>
-                        <button class="btn btn-primary btn-sm update-status-btn" data-task-id="${task.id}" data-task-title="${escapeHtml(task.title)}" data-task-status="${task.status}" data-task-progress="${progress}">Update Status</button>
                     </td>
                 `;
-
-                // Add event listener to the update status button
-                setTimeout(() => {
-                    const updateBtn = row.querySelector('.update-status-btn');
-                    if (updateBtn) {
-                        updateBtn.addEventListener('click', function() {
-                            openStatusModal(this.dataset.taskId, this.dataset.taskTitle, this.dataset.taskStatus, this.dataset.taskProgress);
-                        });
-                    }
-                }, 0);
 
                 return row;
             }
@@ -1606,149 +1531,7 @@
                 return div.innerHTML;
             }
 
-            // Modal functions
-            function openStatusModal(taskId, taskTitle, taskStatus, taskProgress) {
-                console.log('Opening modal for task:', taskId, taskTitle, taskStatus, taskProgress);
 
-                // Set values in the modal
-                taskIdInput.value = taskId;
-                taskTitleDisplay.textContent = taskTitle;
-
-                // Make sure the status select has the correct value
-                if (statusSelect.querySelector(`option[value="${taskStatus}"]`)) {
-                    statusSelect.value = taskStatus;
-                } else {
-                    console.warn(`Status option ${taskStatus} not found in select`);
-                    // Default to the first option
-                    statusSelect.selectedIndex = 0;
-                }
-
-                // Set progress value
-                progressInput.value = taskProgress;
-                notesInput.value = '';
-
-                // Show the modal
-                statusModal.style.display = 'block';
-            }
-
-            function closeModal() {
-                statusModal.style.display = 'none';
-            }
-
-            async function handleStatusUpdate(event) {
-                event.preventDefault();
-
-                const taskId = taskIdInput.value;
-                const status = statusSelect.value;
-                const progress = progressInput.value;
-                const notes = notesInput.value;
-
-                // Validate inputs
-                if (!taskId) {
-                    alert('Task ID is missing');
-                    return;
-                }
-
-                if (!status) {
-                    alert('Please select a status');
-                    return;
-                }
-
-                // Ensure progress is a valid number
-                const progressValue = parseInt(progress);
-                if (isNaN(progressValue) || progressValue < 0 || progressValue > 100) {
-                    alert('Progress must be a number between 0 and 100');
-                    return;
-                }
-
-                try {
-                    // Get token - try both access_token and access
-                    let token = localStorage.getItem('access_token') || localStorage.getItem('access');
-                    if (!token) {
-                        alert('You must be logged in to update task status');
-                        return;
-                    }
-
-                    // Log token for debugging
-                    console.log('Using token:', token.substring(0, 10) + '...');
-
-                    // Show loading state
-                    const submitBtn = statusUpdateForm.querySelector('button[type="submit"]');
-                    const originalText = submitBtn.textContent;
-                    submitBtn.textContent = 'Updating...';
-                    submitBtn.disabled = true;
-
-                    // Make API call to update task status
-                    console.log(`Updating task ${taskId} with status=${status}, progress=${progress}`);
-                    const response = await fetch(`/api/tasks/update/${taskId}/`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            status: status,
-                            progress: progressValue,
-                            notes: notes
-                        })
-                    });
-
-                    // Reset button state
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-
-                    console.log('Response status:', response.status);
-
-                    if (!response.ok) {
-                        // Try to get error details from response
-                        let errorMessage = 'Failed to update task status';
-                        try {
-                            const errorData = await response.json();
-                            console.error('Error data:', errorData);
-                            errorMessage = errorData.error || errorMessage;
-                        } catch (e) {
-                            console.error('Could not parse error response:', e);
-                        }
-                        throw new Error(errorMessage);
-                    }
-
-                    // Get updated task data
-                    const updatedTask = await response.json();
-                    console.log('Updated task data:', updatedTask);
-
-                    // Update task in the local data
-                    const taskIndex = tasksData.findIndex(t => t.id === parseInt(taskId));
-                    console.log('Task index in tasksData:', taskIndex);
-                    if (taskIndex !== -1) {
-                        tasksData[taskIndex] = updatedTask;
-
-                        // Update filtered tasks if needed
-                        const filteredIndex = filteredTasks.findIndex(t => t.id === parseInt(taskId));
-                        if (filteredIndex !== -1) {
-                            filteredTasks[filteredIndex] = updatedTask;
-                        }
-
-                        // Re-render tasks
-                        renderTasks(filteredTasks);
-                    }
-
-                    // Refresh dashboard data to update stats
-                    fetchDashboardData();
-
-                    // Close the modal
-                    closeModal();
-
-                    // Show success message
-                    alert('Task status updated successfully!');
-
-                    // Refresh notifications after updating task status
-                    fetchNotifications();
-
-                } catch (error) {
-                    console.error('Error updating task status:', error);
-                    alert(`Failed to update task status: ${error.message}`);
-                }
-            }
         });
     </script>
 </body>

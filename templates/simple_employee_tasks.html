@@ -141,7 +141,7 @@
             function createEmployeeCard(employee) {
                 const initials = getInitials(employee.first_name, employee.last_name);
                 const techStack = employee.tech_stack || 'Not specified';
-                
+
                 let tasksHtml = '';
                 if (employee.tasks && employee.tasks.length > 0) {
                     tasksHtml = `
@@ -186,15 +186,25 @@
             }
 
             function createTaskRow(task) {
-                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+                // Debug: Log the task object to see its structure
+                console.log('Task data in simple_employee_tasks:', task);
+
+                // Ensure we have valid data for each field
+                const title = task.title || 'No title';
                 const description = task.description ? truncateText(task.description, 50) : 'No description';
-                
+                const status = task.status || 'pending';
+                const priority = task.priority || 'medium';
+                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+
+                // Debug: Log the extracted values
+                console.log('Extracted values:', { title, description, status, priority, dueDate });
+
                 return `
                     <tr>
-                        <td>${escapeHtml(task.title)}</td>
+                        <td>${escapeHtml(title)}</td>
                         <td>${escapeHtml(description)}</td>
-                        <td><span class="task-status ${task.status}">${formatStatus(task.status)}</span></td>
-                        <td>${capitalizeFirstLetter(task.priority)}</td>
+                        <td><span class="task-status ${status}">${formatStatus(status)}</span></td>
+                        <td>${capitalizeFirstLetter(priority)}</td>
                         <td>${dueDate}</td>
                     </tr>
                 `;

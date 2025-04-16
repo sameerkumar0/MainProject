@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Activity Log</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .activity-item {
+            transition: all 0.3s ease;
+        }
+        .activity-item:hover {
+            background-color: #f9fafb;
+        }
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login { background-color: #e0f2fe; color: #0369a1; }
+        .task_created { background-color: #dcfce7; color: #15803d; }
+        .task_assigned { background-color: #dbeafe; color: #1d4ed8; }
+        .task_updated { background-color: #fef3c7; color: #b45309; }
+        .progress_updated { background-color: #fef9c3; color: #854d0e; }
+        .comment_added { background-color: #f3e8ff; color: #7e22ce; }
+        .task_completed { background-color: #d1fae5; color: #047857; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">User Activity Log</h1>
+            <p class="text-gray-600">Track all user activities in the system</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex flex-wrap gap-4 mb-6">
+                <div class="flex-1 min-w-[200px]">
+                    <label for="activity-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Activity Type</label>
+                    <select id="activity-filter" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="all">All Activities</option>
+                        <option value="login">User Login</option>
+                        <option value="task_created">Task Created</option>
+                        <option value="task_assigned">Task Assigned</option>
+                        <option value="task_updated">Task Updated</option>
+                        <option value="progress_updated">Progress Updated</option>
+                        <option value="comment_added">Comment Added</option>
+                        <option value="task_completed">Task Completed</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label for="user-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by User</label>
+                    <select id="user-filter" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="all">All Users</option>
+                        <!-- User options will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label for="date-from" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <input type="date" id="date-from" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label for="date-to" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <input type="date" id="date-to" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                </div>
+            </div>
+            <div class="text-right">
+                <button id="apply-filters" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
+                    Apply Filters
+                </button>
+                <button id="reset-filters" class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <div id="loading" class="flex justify-center items-center py-12">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-3 text-lg text-gray-700">Loading activities...</span>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline" id="error-text">Failed to load activities.</span>
+        </div>
+
+        <div id="no-activities" class="hidden text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No activities found</h3>
+            <p class="mt-1 text-sm text-gray-500">Try changing your filters or check back later.</p>
+        </div>
+
+        <div id="activities-container" class="hidden">
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity Type</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Related Task</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activities-list" class="bg-white divide-y divide-gray-200">
+                            <!-- Activities will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const activityFilter = document.getElementById('activity-filter');
+            const userFilter = document.getElementById('user-filter');
+            const dateFrom = document.getElementById('date-from');
+            const dateTo = document.getElementById('date-to');
+            const applyFiltersBtn = document.getElementById('apply-filters');
+            const resetFiltersBtn = document.getElementById('reset-filters');
+            const loadingElement = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const noActivities = document.getElementById('no-activities');
+            const activitiesContainer = document.getElementById('activities-container');
+            const activitiesList = document.getElementById('activities-list');
+
+            // State
+            let activities = [];
+            let users = [];
+            let currentFilters = {
+                activityType: 'all',
+                userId: 'all',
+                dateFrom: '',
+                dateTo: ''
+            };
+
+            // Initialize
+            fetchActivities();
+            
+            // Event listeners
+            applyFiltersBtn.addEventListener('click', applyFilters);
+            resetFiltersBtn.addEventListener('click', resetFilters);
+
+            // Functions
+            async function fetchActivities() {
+                showLoading();
+                
+                try {
+                    // Get JWT token
+                    const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                    if (!token) {
+                        throw new Error('Authentication token not found. Please log in again.');
+                    }
+
+                    // Build query parameters
+                    let queryParams = new URLSearchParams();
+                    if (currentFilters.activityType !== 'all') {
+                        queryParams.append('activity_type', currentFilters.activityType);
+                    }
+                    if (currentFilters.userId !== 'all') {
+                        queryParams.append('user', currentFilters.userId);
+                    }
+                    if (currentFilters.dateFrom) {
+                        queryParams.append('date_from', currentFilters.dateFrom);
+                    }
+                    if (currentFilters.dateTo) {
+                        queryParams.append('date_to', currentFilters.dateTo);
+                    }
+
+                    const queryString = queryParams.toString();
+                    const url = `/api/tasks/activities/${queryString ? '?' + queryString : ''}`;
+
+                    // Fetch activities
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch activities: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    activities = Array.isArray(data) ? data : data.results || [];
+                    
+                    // Extract unique users for the filter
+                    const uniqueUsers = new Set();
+                    activities.forEach(activity => {
+                        if (activity.user && activity.user_name) {
+                            uniqueUsers.add(JSON.stringify({
+                                id: activity.user,
+                                name: activity.user_name
+                            }));
+                        }
+                    });
+                    
+                    users = Array.from(uniqueUsers).map(user => JSON.parse(user));
+                    populateUserFilter();
+                    
+                    // Display activities
+                    renderActivities();
+                    
+                } catch (error) {
+                    console.error('Error fetching activities:', error);
+                    showError(error.message);
+                }
+            }
+
+            function renderActivities() {
+                if (activities.length === 0) {
+                    showNoActivities();
+                    return;
+                }
+
+                activitiesList.innerHTML = '';
+                
+                activities.forEach(activity => {
+                    const row = document.createElement('tr');
+                    row.className = 'activity-item hover:bg-gray-50';
+                    
+                    // Format the activity type for display
+                    const activityType = formatActivityType(activity.activity_type);
+                    
+                    // Format the date
+                    const createdAt = new Date(activity.created_at);
+                    const formattedDate = createdAt.toLocaleDateString();
+                    const formattedTime = createdAt.toLocaleTimeString();
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="activity-icon ${activity.activity_type} mr-3">
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        ${getActivityIcon(activity.activity_type)}
+                                    </svg>
+                                </div>
+                                <span class="font-medium">${activityType}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${activity.user_name || 'Unknown User'}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">${activity.description}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${activity.task_title ? 
+                                `<a href="/dashboard/tasks/${activity.related_task}/" class="text-indigo-600 hover:text-indigo-900">${activity.task_title}</a>` : 
+                                '<span class="text-gray-500">N/A</span>'
+                            }
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div>${formattedDate}</div>
+                            <div>${formattedTime}</div>
+                        </td>
+                    `;
+                    
+                    activitiesList.appendChild(row);
+                });
+                
+                hideLoading();
+                activitiesContainer.classList.remove('hidden');
+            }
+
+            function populateUserFilter() {
+                // Clear existing options except the first one
+                while (userFilter.options.length > 1) {
+                    userFilter.remove(1);
+                }
+                
+                // Add user options
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    userFilter.appendChild(option);
+                });
+            }
+
+            function applyFilters() {
+                currentFilters = {
+                    activityType: activityFilter.value,
+                    userId: userFilter.value,
+                    dateFrom: dateFrom.value,
+                    dateTo: dateTo.value
+                };
+                
+                fetchActivities();
+            }
+
+            function resetFilters() {
+                activityFilter.value = 'all';
+                userFilter.value = 'all';
+                dateFrom.value = '';
+                dateTo.value = '';
+                
+                currentFilters = {
+                    activityType: 'all',
+                    userId: 'all',
+                    dateFrom: '',
+                    dateTo: ''
+                };
+                
+                fetchActivities();
+            }
+
+            function formatActivityType(type) {
+                if (!type) return 'Unknown';
+                
+                // Convert snake_case to Title Case with spaces
+                return type
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
+
+            function getActivityIcon(type) {
+                switch (type) {
+                    case 'login':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />';
+                    case 'task_created':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />';
+                    case 'task_assigned':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />';
+                    case 'task_updated':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />';
+                    case 'progress_updated':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />';
+                    case 'comment_added':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />';
+                    case 'task_completed':
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />';
+                    default:
+                        return '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
+                }
+            }
+
+            function showLoading() {
+                loadingElement.classList.remove('hidden');
+                activitiesContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                noActivities.classList.add('hidden');
+            }
+
+            function hideLoading() {
+                loadingElement.classList.add('hidden');
+            }
+
+            function showError(message) {
+                hideLoading();
+                errorText.textContent = message;
+                errorMessage.classList.remove('hidden');
+                activitiesContainer.classList.add('hidden');
+                noActivities.classList.add('hidden');
+            }
+
+            function showNoActivities() {
+                hideLoading();
+                noActivities.classList.remove('hidden');
+                activitiesContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

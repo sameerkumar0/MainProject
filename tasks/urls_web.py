@@ -3,7 +3,7 @@ URL configuration for tasks app web views.
 """
 from django.urls import path
 from .views import (
-    task_create, task_list, task_detail, task_assign
+    task_create, task_list, task_detail, task_assign, task_update_progress
 )
 from django.views.generic import TemplateView
 from users.views import employee_dashboard
@@ -15,8 +15,8 @@ urlpatterns = [
     # Task template views
     path('tasks/', task_list, name='task_list'),
     path('tasks/create/', task_create, name='create_task'),
-    path('tasks/<int:pk>/', task_detail, name='task_detail_page'),
-    path('tasks/<int:pk>/progress/', TemplateView.as_view(template_name='tasks/task_progress.html'), name='task_progress'),
+    path('tasks/<int:pk>/', task_detail, name='task_detail'),
+    path('tasks/<int:pk>/update-progress/', task_update_progress, name='task_update_progress'),
     path('tasks/assign/', task_assign, name='task-assign'),
 
     # Dashboard views

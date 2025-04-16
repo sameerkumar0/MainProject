@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
+from django.db.models import Count, Q
 from .models import CustomUser, UserRoles, Department
 from django.contrib.auth import authenticate
 
@@ -177,8 +178,10 @@ class EmployeeListSerializer(serializers.ModelSerializer):
         ]
 
     def get_task_counts(self, obj):
+        from tasks.models import Task
+        # Use the correct related name 'task_assignments' instead of 'tasks'
         return {
-            "total": obj.tasks.count(),
+            "total": Task.objects.filter(assignments__employee=obj).count(),
             "pending": obj.get_pending_tasks_count(),
             "in_progress": obj.get_in_progress_tasks_count(),
             "completed": obj.get_completed_tasks_count(),
@@ -229,8 +232,10 @@ class ManagerProfileSerializer(serializers.ModelSerializer):
             "overdue": 0
         }
 
+        from tasks.models import Task
         for employee in obj.employees.all():
-            team_tasks["total"] += employee.tasks.count()
+            # Use the correct query with assignments__employee instead of tasks
+            team_tasks["total"] += Task.objects.filter(assignments__employee=employee).count()
             team_tasks["pending"] += employee.get_pending_tasks_count()
             team_tasks["in_progress"] += employee.get_in_progress_tasks_count()
             team_tasks["completed"] += employee.get_completed_tasks_count()
@@ -275,6 +280,7 @@ class ManagerDashboardSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     email = serializers.CharField()
     profile_photo = serializers.ImageField(read_only=True)
+    department = serializers.CharField(source='department.name', read_only=True, allow_null=True)
 
     # Team statistics
     team_size = serializers.SerializerMethodField()
@@ -282,13 +288,15 @@ class ManagerDashboardSerializer(serializers.Serializer):
     completed_tasks = serializers.SerializerMethodField()
     in_progress_tasks = serializers.SerializerMethodField()
     pending_tasks = serializers.SerializerMethodField()
+    overdue_tasks = serializers.SerializerMethodField()
 
     # Employee data
     employees = serializers.SerializerMethodField()
     unassigned_tasks = serializers.SerializerMethodField()
+    recent_activities = serializers.SerializerMethodField()
 
     def get_team_size(self, manager):
-        return CustomUser.objects.filter(manager=manager, role=UserRoles.EMPLOYEE).count()
+        return CustomUser.objects.filter(role=UserRoles.EMPLOYEE).count()
 
     def get_total_tasks(self, manager):
         from tasks.models import Task
@@ -306,39 +314,102 @@ class ManagerDashboardSerializer(serializers.Serializer):
         from tasks.models import Task
         return Task.objects.filter(assigned_by=manager, status__in=['pending', 'assigned']).count()
 
+    def get_overdue_tasks(self, manager):
+        from tasks.models import Task
+        from django.utils import timezone
+        return Task.objects.filter(
+            assigned_by=manager,
+            due_date__lt=timezone.now(),
+            status__in=['pending', 'in_progress', 'assigned']
+        ).count()
+
     def get_employees(self, manager):
-        # Get all employees, not just those assigned to this manager
-        employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE)
-        return EmployeeListSerializer(employees, many=True).data
+        # Get all employees with optimized query
+        from django.db.models import Count, Q
+        from tasks.models import Task, TaskAssignment
+
+        # Get all employees with optimized query
+        employees = CustomUser.objects.filter(role=UserRoles.EMPLOYEE).prefetch_related(
+            'task_assignments'  # Prefetch assignments using the correct related_name
+        )
+
+        # Use the optimized serializer
+        return EmployeeListSerializer(employees, many=True, context={'manager': manager}).data
 
     def get_unassigned_tasks(self, manager):
-        from tasks.models import Task
+        from tasks.models import Task, TaskAssignment
         from tasks.serializers import TaskSerializer
-        unassigned_tasks = Task.objects.filter(assigned_by=manager, assignments__isnull=True)
+
+        # Get tasks created by this manager that have no assignments
+        unassigned_tasks = Task.objects.filter(
+            assigned_by=manager
+        ).exclude(
+            id__in=TaskAssignment.objects.values_list('task_id', flat=True)
+        ).select_related('assigned_by')
+
         return TaskSerializer(unassigned_tasks, many=True).data
+
+    def get_recent_activities(self, manager):
+        from tasks.models import UserActivity
+        from tasks.serializers import UserActivitySerializer
+
+        # Get recent activities related to this manager's tasks
+        recent_activities = UserActivity.objects.filter(
+            Q(user=manager) | Q(related_task__assigned_by=manager)
+        ).order_by('-created_at')[:10]
+
+        return UserActivitySerializer(recent_activities, many=True).data
+
+
+class TopPerformerSerializer(serializers.ModelSerializer):
+    """Serializer for displaying top performing employees."""
+    completion_rate = serializers.FloatField()
+    completed_tasks = serializers.IntegerField()
+    total_tasks = serializers.IntegerField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'first_name', 'last_name', 'profile_photo',
+            'tech_stack', 'completion_rate', 'completed_tasks', 'total_tasks'
+        ]
 
 
 class EmployeeTasksSerializer(serializers.ModelSerializer):
     """Serializer for displaying employees with their assigned tasks."""
     tasks = serializers.SerializerMethodField()
     task_counts = serializers.SerializerMethodField()
+    department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
+    completion_rate = serializers.SerializerMethodField()
+    last_active_formatted = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email',
-            'tech_stack', 'profile_photo', 'tasks', 'task_counts'
+            'tech_stack', 'profile_photo', 'tasks', 'task_counts',
+            'department_name', 'completion_rate', 'is_available',
+            'availability_status', 'last_active_formatted', 'phone_number'
         ]
 
     def get_tasks(self, employee):
         from tasks.models import Task
         from tasks.serializers import TaskSerializer
-        tasks = Task.objects.filter(assignments__employee=employee).select_related('assigned_by')
+
+        # Get tasks assigned to this employee with optimized query
+        tasks = Task.objects.filter(assignments__employee=employee)\
+            .select_related('assigned_by')\
+            .prefetch_related('progress_updates')\
+            .order_by('-due_date')
+
         return TaskSerializer(tasks, many=True).data
 
     def get_task_counts(self, employee):
         from tasks.models import Task
+
+        # Use a single query with annotations for better performance
         tasks = Task.objects.filter(assignments__employee=employee)
+
         return {
             'total': tasks.count(),
             'completed': tasks.filter(status='completed').count(),
@@ -346,6 +417,30 @@ class EmployeeTasksSerializer(serializers.ModelSerializer):
             'pending': tasks.filter(status__in=['pending', 'assigned']).count(),
             'overdue': tasks.filter(
                 due_date__lt=timezone.now(),
-                status__in=['pending', 'in_progress']
+                status__in=['pending', 'in_progress', 'assigned']
             ).count()
         }
+
+    def get_completion_rate(self, employee):
+        # Calculate task completion rate
+        return employee.get_completion_rate()
+
+    def get_last_active_formatted(self, employee):
+        # Format last active time in a human-readable format
+        if not employee.last_active:
+            return 'Never'
+
+        # Calculate time difference
+        now = timezone.now()
+        diff = now - employee.last_active
+
+        if diff.days > 30:
+            return f"{diff.days // 30} months ago"
+        elif diff.days > 0:
+            return f"{diff.days} days ago"
+        elif diff.seconds > 3600:
+            return f"{diff.seconds // 3600} hours ago"
+        elif diff.seconds > 60:
+            return f"{diff.seconds // 60} minutes ago"
+        else:
+            return "Just now"

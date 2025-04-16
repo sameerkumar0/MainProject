@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model, logout as auth_logout
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from .serializers import EmployeeSerializer, LoginSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ManagerRegisterSerializer, ManagerDashboardSerializer, EmployeeTasksSerializer
+from .serializers import EmployeeSerializer, LoginSerializer, ForgotPasswordSerializer, ResetPasswordSerializer, ManagerRegisterSerializer, ManagerDashboardSerializer, EmployeeTasksSerializer, TopPerformerSerializer
 from notifications.email_services import send_email_notification
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -379,15 +379,68 @@ class ManagerDashboardAPIView(generics.RetrieveAPIView):
         # Return the current user (manager) as the object to be serialized
         return self.request.user
 
+    def retrieve(self, request, *args, **kwargs):
+        # Get the serialized manager data
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+
+        # Add unassigned tasks to the response
+        from tasks.models import Task, TaskAssignment
+        from tasks.serializers import TaskSerializer
+        from django.db.models import Count, F, ExpressionWrapper, FloatField, Q
+        from django.db.models.functions import Cast
+
+        unassigned_tasks = Task.objects.filter(assignments__isnull=True)
+        data['unassigned_tasks'] = TaskSerializer(unassigned_tasks, many=True).data
+
+        # Get top 5 performers based on completion rate and number of completed tasks
+        # First, get employees with at least one task assigned
+        employees_with_tasks = CustomUser.objects.filter(
+            role=UserRoles.EMPLOYEE,
+            task_assignments__isnull=False
+        ).distinct()
+
+        # Calculate metrics for each employee
+        top_performers = []
+        for employee in employees_with_tasks:
+            total_tasks = Task.objects.filter(assignments__employee=employee).count()
+            if total_tasks > 0:  # Only include employees with at least one task
+                completed_tasks = Task.objects.filter(
+                    assignments__employee=employee,
+                    status='completed'
+                ).count()
+
+                completion_rate = (completed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
+
+                top_performers.append({
+                    'id': employee.id,
+                    'first_name': employee.first_name,
+                    'last_name': employee.last_name,
+                    'profile_photo': employee.profile_photo.url if employee.profile_photo else None,
+                    'tech_stack': employee.tech_stack,
+                    'completion_rate': completion_rate,
+                    'completed_tasks': completed_tasks,
+                    'total_tasks': total_tasks
+                })
+
+        # Sort by completion rate (primary) and number of completed tasks (secondary)
+        top_performers.sort(key=lambda x: (-x['completion_rate'], -x['completed_tasks']))
+
+        # Take top 5
+        data['top_performers'] = top_performers[:5]
+
+        return Response(data)
+
 @login_required
-def manager_employee_dashboard(request):
+def manager_dashboard(request):
     """View for the manager employee dashboard page with employee tasks."""
     # Check if the user is a manager
     if request.user.role != UserRoles.MANAGER:
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("You are not authorized to view this page.")
 
-    return render(request, 'manager_employee_dashboard.html')
+    return render(request, 'manager_dashboard.html')
 
 
 def employee_tasks_view(request):

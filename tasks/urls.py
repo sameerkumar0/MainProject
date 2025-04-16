@@ -5,7 +5,7 @@ from .views import (
     TaskListView, TaskCreateView, TaskUpdateStatusView, TaskDetailView,
     TaskProgressListCreateView, TaskAssignView, EmployeeTaskListView, UnassignedTasksView,
     # Utility API views
-    NotificationListView, NotificationMarkReadView, UserActivityListView,
+    NotificationListView, NotificationMarkReadView, UserActivityListView, user_activity_list,
     # Dashboard API views
     EmployeeDashboardAPIView
 )
@@ -25,6 +25,7 @@ urlpatterns = [
     path('notifications/', NotificationListView.as_view(), name='notification-list'),
     path('notifications/<int:pk>/read/', NotificationMarkReadView.as_view(), name='notification-mark-read'),
     path('activities/', UserActivityListView.as_view(), name='user-activity-list'),
+    path('activities/view/', user_activity_list, name='user-activity-list-view'),
 
     # Dashboard API endpoints
     path('dashboard/', EmployeeDashboardAPIView.as_view(), name='employee-dashboard-api'),

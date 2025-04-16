@@ -127,7 +127,7 @@ class CustomUser(AbstractUser):
         return (completed / total) * 100
 
     # Manager-specific methods
-    def get_team_workload(self):
+    def get_employee_workload(self):
         """Returns workload distribution across team members."""
         if not self.is_manager():
             return None
@@ -156,8 +156,10 @@ class CustomUser(AbstractUser):
         employees = self.employees.all()
         performance_data = []
 
+        from tasks.models import Task
         for employee in employees:
-            total_tasks = employee.tasks.count()
+            # Use the correct query with assignments__employee instead of tasks
+            total_tasks = Task.objects.filter(assignments__employee=employee).count()
             completed_tasks = employee.get_completed_tasks_count()
             overdue_tasks = employee.get_overdue_tasks_count()
 

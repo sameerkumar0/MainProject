@@ -1,10 +1,12 @@
 from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.db.models import Q
-from datetime import timedelta
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
+from datetime import timedelta, datetime
 from .models import Task, TaskAssignment, TaskProgress, Notification, UserActivity
 from .serializers import *
 from .permissions import IsManager, IsEmployee,IsTaskAssignedToEmployee
@@ -67,6 +69,19 @@ class TaskAssignView(APIView):
 
             # Update task status
             task.status = 'assigned'
+
+            # Check if due_date is provided in the request
+            due_date = request.data.get('due_date')
+            if due_date:
+                from datetime import datetime
+                # Parse the date and make it timezone-aware
+                naive_date = datetime.strptime(due_date, '%Y-%m-%d')
+                # Set the time to end of day (23:59:59) in the current timezone
+                aware_date = timezone.make_aware(
+                    datetime.combine(naive_date.date(), datetime.max.time().replace(microsecond=0))
+                )
+                task.due_date = aware_date
+
             task.save()
 
             # Create notification for the employee
@@ -247,8 +262,193 @@ class TaskDetailView(generics.RetrieveAPIView):
         # For employees, return tasks assigned to them via TaskAssignment
         return Task.objects.filter(assignments__employee=user, assignments__completed_at__isnull=True)
 
+@login_required
 def task_detail(request, pk):
-    return render(request,'tasks/task_view.html')
+    """View for displaying task details with progress history."""
+    try:
+        # Get the task with related data
+        task = Task.objects.select_related('assigned_by').get(pk=pk)
+
+        # Check if user has permission to view this task
+        user = request.user
+        if user.role == 'Employee':
+            # Employees can only view tasks assigned to them
+            if not TaskAssignment.objects.filter(task=task, employee=user).exists():
+                return HttpResponseForbidden("You don't have permission to view this task.")
+
+        # Get progress updates for this task
+        progress_updates = TaskProgress.objects.filter(task=task).select_related('updated_by').order_by('-created_at')
+
+        # Handle progress update form submission
+        if request.method == 'POST' and user.role == 'Employee':
+            progress_percentage = request.POST.get('progress_percentage')
+            notes = request.POST.get('notes', '')
+
+            try:
+                progress_percentage = int(progress_percentage)
+                if 0 <= progress_percentage <= 100:
+                    # Create progress update
+                    TaskProgress.objects.create(
+                        task=task,
+                        updated_by=user,
+                        progress_percentage=progress_percentage,
+                        notes=notes
+                    )
+
+                    # Update task progress
+                    task.progress = progress_percentage
+
+                    # If progress is 100%, mark task as completed
+                    if progress_percentage == 100:
+                        task.status = 'completed'
+
+                        # Update task assignment
+                        assignment = TaskAssignment.objects.filter(task=task, employee=user).first()
+                        if assignment and not assignment.completed_at:
+                            assignment.completed_at = timezone.now()
+                            assignment.save()
+
+                    # If progress is > 0 and status is pending, change to in_progress
+                    elif progress_percentage > 0 and task.status == 'pending':
+                        task.status = 'in_progress'
+
+                    task.save()
+
+                    # Create notification for the manager
+                    Notification.objects.create(
+                        user=task.assigned_by,
+                        notification_type='task_progress',
+                        title='Task Progress Updated',
+                        message=f'{user.first_name} {user.last_name} updated progress on task "{task.title}" to {progress_percentage}%',
+                        related_task=task
+                    )
+
+                    # Create activity record
+                    UserActivity.objects.create(
+                        user=user,
+                        activity_type='task_progress',
+                        description=f'Updated progress on task "{task.title}" to {progress_percentage}%',
+                        related_task=task
+                    )
+
+                    # Redirect to avoid form resubmission
+                    return redirect('task_detail', pk=task.id)
+                else:
+                    # Handle invalid progress percentage
+                    return render(request, 'tasks/task_view.html', {
+                        'task': task,
+                        'progress_updates': progress_updates,
+                        'error': 'Progress must be between 0 and 100'
+                    })
+            except ValueError:
+                # Handle non-numeric progress percentage
+                return render(request, 'tasks/task_view.html', {
+                    'task': task,
+                    'progress_updates': progress_updates,
+                    'error': 'Progress must be a number'
+                })
+
+        # Render the template with context
+        return render(request, 'tasks/task_view.html', {
+            'task': task,
+            'progress_updates': progress_updates
+        })
+
+    except Task.DoesNotExist:
+        # Handle task not found
+        return render(request, 'tasks/task_view.html', {'error': 'Task not found'})
+
+
+@login_required
+def task_update_progress(request, pk):
+    """View for handling task progress updates via form submission."""
+    if request.method != 'POST':
+        # Redirect to task detail page if not a POST request
+        return redirect('task_detail', pk=pk)
+
+    try:
+        # Get the task
+        task = get_object_or_404(Task, pk=pk)
+
+        # Check if user has permission to update this task
+        user = request.user
+        if user.role != 'Employee':
+            return HttpResponseForbidden("Only employees can update task progress.")
+
+        # Check if task is assigned to this employee
+        if not TaskAssignment.objects.filter(task=task, employee=user).exists():
+            return HttpResponseForbidden("You can only update progress on tasks assigned to you.")
+
+        # Get form data
+        progress_percentage = request.POST.get('progress_percentage')
+        notes = request.POST.get('notes', '')
+
+        try:
+            progress_percentage = int(progress_percentage)
+            if 0 <= progress_percentage <= 100:
+                # Create progress update
+                TaskProgress.objects.create(
+                    task=task,
+                    updated_by=user,
+                    progress_percentage=progress_percentage,
+                    notes=notes
+                )
+
+                # Update task progress
+                task.progress = progress_percentage
+
+                # If progress is 100%, mark task as completed
+                if progress_percentage == 100:
+                    task.status = 'completed'
+
+                    # Update task assignment
+                    assignment = TaskAssignment.objects.filter(task=task, employee=user).first()
+                    if assignment and not assignment.completed_at:
+                        assignment.completed_at = timezone.now()
+                        assignment.save()
+
+                # If progress is > 0 and status is pending, change to in_progress
+                elif progress_percentage > 0 and task.status in ['pending', 'assigned']:
+                    task.status = 'in_progress'
+
+                task.save()
+
+                # Create notification for the manager
+                Notification.objects.create(
+                    user=task.assigned_by,
+                    notification_type='task_progress',
+                    title='Task Progress Updated',
+                    message=f'{user.first_name} {user.last_name} updated progress on task "{task.title}" to {progress_percentage}%',
+                    related_task=task
+                )
+
+                # Create activity record
+                UserActivity.objects.create(
+                    user=user,
+                    activity_type='task_progress',
+                    description=f'Updated progress on task "{task.title}" to {progress_percentage}%',
+                    related_task=task
+                )
+
+                # Redirect to task detail page with success message
+                return redirect('task_detail', pk=task.id)
+            else:
+                # Handle invalid progress percentage
+                return render(request, 'tasks/task_view.html', {
+                    'task': task,
+                    'progress_updates': TaskProgress.objects.filter(task=task).select_related('updated_by').order_by('-created_at'),
+                    'error': 'Progress must be between 0 and 100'
+                })
+        except ValueError:
+            # Handle non-numeric progress percentage
+            return render(request, 'tasks/task_view.html', {
+                'task': task,
+                'progress_updates': TaskProgress.objects.filter(task=task).select_related('updated_by').order_by('-created_at'),
+                'error': 'Progress must be a number'
+            })
+    except Task.DoesNotExist:
+        # Handle task not found
+        return render(request, 'tasks/task_view.html', {'error': 'Task not found'})
 
 
 def task_assign(request):
@@ -283,8 +483,15 @@ def task_assign(request):
             # Update task status and due date
             task.status = 'assigned'
             if due_date:
+                from django.utils import timezone
                 from datetime import datetime
-                task.due_date = datetime.strptime(due_date, '%Y-%m-%d')
+                # Parse the date and make it timezone-aware
+                naive_date = datetime.strptime(due_date, '%Y-%m-%d')
+                # Set the time to end of day (23:59:59) in the current timezone
+                aware_date = timezone.make_aware(
+                    datetime.combine(naive_date.date(), datetime.max.time().replace(microsecond=0))
+                )
+                task.due_date = aware_date
             task.save()
 
             # Create notification for the employee
@@ -496,10 +703,50 @@ class NotificationMarkReadView(generics.UpdateAPIView):
 class UserActivityListView(generics.ListAPIView):
     """
     List all activities for the current user.
-
+    Supports filtering by activity_type, user, and date range.
     """
-    permission_classes = [permissions.IsAuthenticated,IsManager]
+    permission_classes = [permissions.IsAuthenticated, IsManager]
     serializer_class = UserActivitySerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at', 'activity_type']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = UserActivity.objects.select_related('user', 'related_task')
+
+        # Apply filters
+        activity_type = self.request.query_params.get('activity_type', None)
+        user_id = self.request.query_params.get('user', None)
+        date_from = self.request.query_params.get('date_from', None)
+        date_to = self.request.query_params.get('date_to', None)
+
+        if activity_type:
+            queryset = queryset.filter(activity_type=activity_type)
+
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+
+        if date_from:
+            queryset = queryset.filter(created_at__gte=date_from)
+
+        if date_to:
+            # Add one day to include the end date
+            date_to_end = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            queryset = queryset.filter(created_at__lt=date_to_end)
+
+        return queryset
+
+
+@login_required
+def user_activity_list(request):
+    """
+    Render the user activity list template.
+    Only managers can access this view.
+    """
+    if request.user.role != 'Manager':
+        return HttpResponseForbidden("You are not authorized to view this page.")
+
+    return render(request, 'tasks/user_activity_list.html')
 
 
 # Dashboard API View
@@ -523,10 +770,39 @@ class UnassignedTasksView(generics.ListAPIView):
     """
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated, IsManager]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'due_date', 'priority']
+    ordering = ['-created_at']
 
     def get_queryset(self):
-        # Get tasks that are not assigned to any employee
-        return Task.objects.filter(assignments__isnull=True)
+        # Get tasks created by this manager that have no assignments
+        manager = self.request.user
+
+        # Use a more efficient query with select_related
+        return Task.objects.filter(
+            assigned_by=manager,
+            assignments__isnull=True
+        ).select_related('assigned_by')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Get task statistics
+        total_unassigned = queryset.count()
+        high_priority = queryset.filter(priority__in=['high', 'urgent']).count()
+
+        # Serialize the data
+        serializer = self.get_serializer(queryset, many=True)
+
+        # Return with statistics
+        return Response({
+            'results': serializer.data,
+            'stats': {
+                'total_unassigned': total_unassigned,
+                'high_priority': high_priority
+            }
+        })
 
 
 class EmployeeTaskListView(generics.ListAPIView):

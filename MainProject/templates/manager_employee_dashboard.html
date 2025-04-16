@@ -394,6 +394,7 @@
                 <a href="/dashboard/tasks/">Tasks</a>
                 <a href="/dashboard/tasks/create/">Create Task</a>
                 <a href="/dashboard/tasks/assign/">Assign Task</a>
+                <a href="/api/tasks/activities/view/">Activity Log</a>
                 <a href="/auth/logout/">Logout</a>
             </nav>
         </div>
@@ -513,10 +514,10 @@
                     }
 
                     const dashboardData = await response.json();
-                    
+
                     // Render employees
                     renderEmployees(dashboardData.employees);
-                    
+
                     // Store unassigned tasks for later use
                     window.unassignedTasks = dashboardData.unassigned_tasks || [];
 
@@ -614,7 +615,7 @@
 
                 // Use the unassigned tasks from the dashboard data
                 const tasks = window.unassignedTasks || [];
-                
+
                 try {
                     // Populate task select
                     taskSelect.innerHTML = '<option value="">-- Select a task --</option>';

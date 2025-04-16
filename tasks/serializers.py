@@ -99,18 +99,18 @@ class TaskProgressSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='related_task.title', read_only=True)
 
     class Meta:
         model = Notification
-        fields = ['id', 'user', 'user_name', 'notification_type', 'title', 'message',
+        fields = ['id', 'user', 'username', 'notification_type', 'title', 'message',
                  'related_task', 'task_title', 'created_at', 'read']
         read_only_fields = ['created_at']
 
 
 class UserActivitySerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='related_task.title', read_only=True)
 
     class Meta:

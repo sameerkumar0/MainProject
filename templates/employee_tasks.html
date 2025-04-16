@@ -777,18 +777,29 @@
             }
 
             function createTaskRow(task) {
+                // Debug: Log the task object to see its structure
+                console.log('Task data in employee_tasks:', task);
+
+                // Ensure we have valid data for each field
+                const id = task.id || 0;
+                const title = task.title || 'No title';
+                const priority = task.priority || 'medium';
+                const status = task.status || 'pending';
                 const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
                 const progress = task.progress || 0;
 
+                // Debug: Log the extracted values
+                console.log('Extracted values:', { id, title, priority, status, dueDate, progress });
+
                 return `
                     <tr>
-                        <td>${escapeHtml(task.title)}</td>
+                        <td>${escapeHtml(title)}</td>
                         <td>
-                            <span class="task-priority ${task.priority}">${capitalizeFirstLetter(task.priority)}</span>
+                            <span class="task-priority ${priority}">${capitalizeFirstLetter(priority)}</span>
                         </td>
                         <td>${dueDate}</td>
                         <td>
-                            <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
+                            <span class="task-status ${status}">${formatStatus(status)}</span>
                         </td>
                         <td>
                             <div class="progress-bar">
@@ -797,7 +808,7 @@
                             <div class="progress-text">${progress}%</div>
                         </td>
                         <td class="task-actions">
-                            <a href="/api/tasks/tasks/${task.id}/" class="btn btn-outline btn-sm">View</a>
+                            <a href="/api/tasks/tasks/${id}/" class="btn btn-outline btn-sm">View</a>
                         </td>
                     </tr>
                 `;

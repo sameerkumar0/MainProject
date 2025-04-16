@@ -231,8 +231,8 @@
                 body: JSON.stringify({
                     task_id: formData.get('task_id'),
                     employee_id: formData.get('employee_id'),
-                    due_date: formData.get('due_date'),
-                    note: formData.get('note')
+                    due_date: formData.get('due_date') || null,
+                    note: formData.get('note') || null
                 })
             })
             .then(response => response.json())
