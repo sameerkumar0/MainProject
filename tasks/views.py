@@ -214,12 +214,68 @@ class TaskListView(generics.ListAPIView):
 
 @login_required
 def task_list(request):
-    """Render the appropriate task list template based on user role."""
+    """Render the appropriate task list template based on user role and query parameters."""
     user = request.user
 
-    if user.role == 'Manager':
-        # For managers, show all tasks
-        return render(request, 'tasks/manager_task_list.html')
+    # Check if an employee_id is provided in the query parameters (for managers viewing employee tasks)
+    employee_id = request.GET.get('employee_id')
+
+    if user.role == 'Manager' and employee_id:
+        # Manager viewing a specific employee's tasks
+        try:
+            from users.models import CustomUser
+            employee = CustomUser.objects.get(id=employee_id, role='Employee')
+
+            # Get tasks assigned to the specified employee
+            tasks = Task.objects.filter(assignments__employee=employee)
+
+            # Calculate task statistics
+            total_tasks = tasks.count()
+            completed_tasks = tasks.filter(status='completed').count()
+            in_progress_tasks = tasks.filter(status='in_progress').count()
+            pending_tasks = tasks.filter(status__in=['pending', 'assigned']).count()
+
+            # Prepare context for the template
+            context = {
+                'employee': employee,
+                'task_stats': {
+                    'total': total_tasks,
+                    'completed': completed_tasks,
+                    'in_progress': in_progress_tasks,
+                    'pending': pending_tasks
+                },
+                'is_manager_view': True  # Flag to indicate this is a manager viewing employee tasks
+            }
+
+            return render(request, 'tasks/employee_task_list.html', context)
+
+        except CustomUser.DoesNotExist:
+            # If employee not found, redirect to all tasks
+            from django.contrib import messages
+            messages.error(request, "Employee not found.")
+            return render(request, 'tasks/employee_task_list.html', {'error': 'Employee not found'})
+
+    elif user.role == 'Manager':
+        # For managers viewing all tasks
+        tasks = Task.objects.all()
+
+        # Calculate task statistics
+        total_tasks = tasks.count()
+        completed_tasks = tasks.filter(status='completed').count()
+        in_progress_tasks = tasks.filter(status='in_progress').count()
+        pending_tasks = tasks.filter(status__in=['pending', 'assigned']).count()
+
+        context = {
+            'task_stats': {
+                'total': total_tasks,
+                'completed': completed_tasks,
+                'in_progress': in_progress_tasks,
+                'pending': pending_tasks
+            }
+        }
+
+        return render(request, 'tasks/employee_task_list.html', context)
+
     else:  # Employee
         # Get tasks assigned to the employee via TaskAssignment
         tasks = Task.objects.filter(assignments__employee=user)

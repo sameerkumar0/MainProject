@@ -11,7 +11,13 @@
 </head>
 <body class="bg-light">
   <div class="container py-4">
-    <h2 class="mb-4" id="role-title">Loading Tasks...</h2>
+    {% if is_manager_view and employee %}
+    <h2 class="mb-4" id="role-title">Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
+    {% elif is_manager_view %}
+    <h2 class="mb-4" id="role-title">All Tasks</h2>
+    {% else %}
+    <h2 class="mb-4" id="role-title">My Tasks</h2>
+    {% endif %}
 
     <!-- Filters -->
     <form id="filter-form" class="row g-3 mb-4">
@@ -69,9 +75,19 @@
     const taskTableBody = document.getElementById('task-table-body');
     const roleTitle = document.getElementById('role-title');
 
+    // Set API endpoint based on context
+    let apiEndpoint = '/api/tasks/';
+    {% if is_manager_view and employee %}
+    apiEndpoint = '/api/employee/{{ employee.id }}/tasks/';
+    {% elif is_manager_view %}
+    apiEndpoint = '/api/tasks/';
+    {% else %}
+    apiEndpoint = '/api/employee/tasks/';
+    {% endif %}
+
     async function fetchTasks(query = '') {
       try {
-        const res = await fetch(`/api/tasks/${query}`, {
+        const res = await fetch(`${apiEndpoint}${query}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access')}`  // JWT Token
           }
@@ -117,13 +133,7 @@
           taskTableBody.appendChild(tr);
         });
 
-        // Set title based on role from token (optional improvement: decode JWT)
-        const userRole = localStorage.getItem('role'); // Or decode from JWT
-        if (userRole === 'Manager') {
-          roleTitle.textContent = "All Tasks (Manager View)";
-        } else {
-          roleTitle.textContent = "My Tasks";
-        }
+        // Title is already set in the HTML based on user role
 
       } catch (error) {
         console.error('Error fetching tasks:', error);

@@ -133,12 +133,6 @@
             color: var(--gray-color);
         }
 
-        .page-title {
-            margin: 30px 0;
-            color: var(--dark-color);
-            text-align: center;
-        }
-
         .dashboard-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -277,7 +271,6 @@
             background-color: #f8f9fa;
         }
 
-        /* Modern card-like styling */
         .task-row {
             transition: all 0.2s ease;
         }
@@ -337,63 +330,9 @@
             color: var(--danger-color);
         }
 
-        /* New styles for enhanced task display */
         .task-title {
             font-weight: 600;
             margin-bottom: 5px;
-        }
-
-        .assigned-by {
-            font-size: 0.8rem;
-            color: var(--gray-color);
-        }
-
-        .due-date-container {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .time-remaining {
-            font-size: 0.8rem;
-            margin-top: 3px;
-        }
-
-        .overdue-text {
-            color: var(--danger-color);
-            font-weight: 500;
-        }
-
-        .today-text {
-            color: var(--danger-color);
-            font-weight: 500;
-        }
-
-        .tomorrow-text {
-            color: var(--warning-color);
-            font-weight: 500;
-        }
-
-        .upcoming-text {
-            color: var(--warning-color);
-        }
-
-        .far-text {
-            color: var(--gray-color);
-        }
-
-        .due-date.overdue {
-            color: var(--danger-color);
-            font-weight: 600;
-        }
-
-        .due-date.today {
-            color: var(--danger-color);
-            font-weight: 600;
-        }
-
-        .due-date.tomorrow {
-            color: var(--warning-color);
-            font-weight: 600;
         }
 
         .progress-bar {
@@ -426,44 +365,6 @@
             font-weight: 500;
         }
 
-        .task-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 12px;
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            border: none;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--secondary-color);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
         .btn-view {
             background-color: white;
             color: var(--primary-color);
@@ -473,6 +374,8 @@
             font-size: 0.85rem;
             font-weight: 500;
             transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .btn-view:hover {
@@ -481,21 +384,139 @@
             border-color: var(--primary-color);
         }
 
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 0.8rem;
+        .btn-update {
+            background-color: white;
+            color: var(--warning-color);
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 40px 0;
+        .btn-update:hover {
+            background-color: var(--warning-color);
+            color: white;
+            border-color: var(--warning-color);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--dark-color);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
             color: var(--gray-color);
         }
 
-        .empty-state-icon {
-            font-size: 3rem;
+        .modal-body {
             margin-bottom: 20px;
-            color: #ddd;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-cancel {
+            background-color: white;
+            color: var(--gray-color);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-cancel:hover {
+            background-color: #f5f5f5;
+        }
+
+        .btn-save {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-save:hover {
+            background-color: var(--secondary-color);
         }
 
         .loading {
@@ -524,9 +545,22 @@
             border-radius: var(--border-radius);
             margin: 20px 0;
             text-align: center;
+            display: none;
         }
 
-        /* Additional UI Components */
+        .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray-color);
+            display: none;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+
         .search-container {
             margin-bottom: 20px;
         }
@@ -538,345 +572,34 @@
             border-radius: var(--border-radius);
             font-size: 0.9rem;
         }
-
-        .sort-container, .group-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .sort-select, .group-select {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-        }
-
-        .group-header {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-
-        .group-title {
-            padding: 10px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .group-count {
-            font-size: 0.8rem;
-            color: var(--gray-color);
-        }
-
-        .status-label, .priority-label {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .status-label.completed {
-            background-color: rgba(76, 175, 80, 0.1);
-            color: var(--success-color);
-        }
-
-        .status-label.in_progress {
-            background-color: rgba(255, 152, 0, 0.1);
-            color: var(--warning-color);
-        }
-
-        .status-label.pending, .status-label.assigned {
-            background-color: rgba(244, 67, 54, 0.1);
-            color: var(--danger-color);
-        }
-
-        .priority-label.low {
-            background-color: rgba(76, 175, 80, 0.1);
-            color: var(--success-color);
-        }
-
-        .priority-label.medium {
-            background-color: rgba(33, 150, 243, 0.1);
-            color: #2196f3;
-        }
-
-        .priority-label.high {
-            background-color: rgba(255, 152, 0, 0.1);
-            color: var(--warning-color);
-        }
-
-        .priority-label.urgent {
-            background-color: rgba(244, 67, 54, 0.1);
-            color: var(--danger-color);
-        }
-
-        .task-row {
-            position: relative;
-        }
-
-        .task-row::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-        }
-
-        .task-row.urgent::before {
-            background-color: var(--danger-color);
-        }
-
-        .task-row.high::before {
-            background-color: var(--warning-color);
-        }
-
-        .task-row.medium::before {
-            background-color: var(--primary-color);
-        }
-
-        .task-row.low::before {
-            background-color: var(--success-color);
-        }
-
-        .due-date {
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-
-        .due-date.overdue {
-            background-color: rgba(244, 67, 54, 0.1);
-            color: var(--danger-color);
-        }
-
-        .due-date.today {
-            background-color: rgba(255, 152, 0, 0.1);
-            color: var(--warning-color);
-        }
-
-        .due-date.upcoming {
-            background-color: rgba(33, 150, 243, 0.1);
-            color: #2196f3;
-        }
-
-        .due-date.far {
-            background-color: rgba(76, 175, 80, 0.1);
-            color: var(--success-color);
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-            padding: 10px 0;
-        }
-
-        .pagination-info {
-            color: var(--gray-color);
-        }
-
-        /* Notification styles */
-        .stat-card.notification {
-            border-top: 4px solid #9c27b0;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .stat-card.notification:hover {
-            background-color: #f8f0fc;
-        }
-
-        .notifications-panel {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            width: 350px;
-            max-width: 90vw;
-            max-height: 80vh;
-            background-color: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            z-index: 100;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .notifications-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            background-color: var(--secondary-color);
-            color: white;
-        }
-
-        .notifications-header h3 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
-
-        .notifications-list {
-            overflow-y: auto;
-            max-height: calc(80vh - 60px);
-            padding: 0;
-        }
-
-        .notification-item {
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s;
-        }
-
-        .notification-item:hover {
-            background-color: #f9f9f9;
-        }
-
-        .notification-item.unread {
-            background-color: #f0f7ff;
-        }
-
-        .notification-item.unread:hover {
-            background-color: #e6f2ff;
-        }
-
-        .notification-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 5px;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-
-        .notification-time {
-            font-size: 0.8rem;
-            color: var(--gray-color);
-        }
-
-        .notification-message {
-            font-size: 0.9rem;
-            color: var(--dark-color);
-            margin-bottom: 10px;
-        }
-
-        .notification-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .notification-task-link {
-            font-size: 0.8rem;
-            color: var(--primary-color);
-            text-decoration: none;
-        }
-
-        .notification-task-link:hover {
-            text-decoration: underline;
-        }
-
-        .mark-read-btn {
-            font-size: 0.8rem;
-            color: var(--primary-color);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-        }
-
-        .mark-read-btn:hover {
-            text-decoration: underline;
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background-color: var(--danger-color);
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: bold;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .dashboard-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .task-table {
-                display: block;
-                overflow-x: auto;
-            }
-
-            .task-filters {
-                flex-direction: column;
-            }
-
-            .task-cards-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .dashboard-stats {
-                grid-template-columns: 1fr;
-            }
-
-            .user-info {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .user-avatar {
-                margin: 0 auto;
-            }
-        }
     </style>
 </head>
 <body>
     <header>
         <div class="header-container">
-            <a href="/" class="logo">Task<span>Flow</span></a>
-            <nav class="nav-links">
-                <a href="api/dashboard/tasks/">Tasks</a>
+            <a href="/" class="logo">Task<span>Manager</span></a>
+            <div class="nav-links">
                 <a href="/dashboard/employee_dashboard/">Dashboard</a>
+                <a href="/dashboard/tasks/">My Tasks</a>
                 <a href="/auth/logout/">Logout</a>
-            </nav>
+            </div>
         </div>
     </header>
 
     <div class="container">
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading dashboard data...</p>
+            <p>Loading your dashboard...</p>
         </div>
 
-        <div id="error-message" class="error-message" style="display: none;"></div>
+        <div id="error-message" class="error-message"></div>
 
         <div id="dashboard-content" style="display: none;">
             <div class="user-info">
-                <div class="user-avatar" id="user-avatar"></div>
+                <div id="user-avatar" class="user-avatar">JS</div>
                 <div class="user-details">
-                    <h2 id="user-name">Employee Name</h2>
-                    <p id="user-email">employee@example.com</p>
+                    <h2 id="user-name">John Smith</h2>
+                    <p id="user-email">john.smith@example.com</p>
                 </div>
             </div>
 
@@ -896,21 +619,6 @@
                 <div class="stat-card pending">
                     <div class="stat-number" id="pending-tasks">0</div>
                     <div class="stat-label">Pending</div>
-                </div>
-                <div class="stat-card notification" id="notification-card">
-                    <div class="stat-number" id="unread-notifications">0</div>
-                    <div class="stat-label">Notifications</div>
-                </div>
-            </div>
-
-            <!-- Notifications Panel -->
-            <div id="notifications-panel" class="notifications-panel" style="display: none;">
-                <div class="notifications-header">
-                    <h3>Notifications</h3>
-                    <button id="close-notifications" class="btn btn-sm btn-outline">×</button>
-                </div>
-                <div id="notifications-list" class="notifications-list">
-                    <div class="notification-loading">Loading notifications...</div>
                 </div>
             </div>
 
@@ -935,36 +643,8 @@
                     </div>
                 </div>
 
-                <!-- Search Container -->
                 <div class="search-container">
                     <input type="text" id="task-search" class="search-input" placeholder="Search tasks...">
-                </div>
-
-                <!-- Advanced Controls -->
-                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
-                    <!-- Sort Container -->
-                    <div class="sort-container">
-                        <label for="sort-select">Sort by:</label>
-                        <select id="sort-select" class="sort-select">
-                            <option value="smart">Smart Sort</option>
-                            <option value="due_date">Due Date</option>
-                            <option value="priority">Priority</option>
-                            <option value="status">Status</option>
-                            <option value="progress">Progress</option>
-                            <option value="title">Title</option>
-                        </select>
-                        <button id="sort-direction" class="btn btn-sm btn-outline">↑</button>
-                    </div>
-
-                    <!-- Group Container -->
-                    <div class="group-container">
-                        <label for="group-select">Group by:</label>
-                        <select id="group-select" class="group-select">
-                            <option value="none">No Grouping</option>
-                            <option value="status">Status</option>
-                            <option value="priority">Priority</option>
-                        </select>
-                    </div>
                 </div>
 
                 <table class="task-table" id="tasks-table">
@@ -984,10 +664,7 @@
                     </tbody>
                 </table>
 
-                <!-- Pagination -->
-                <div id="tasks-pagination" class="pagination" style="display: none;"></div>
-
-                <div id="empty-tasks" class="empty-state" style="display: none;">
+                <div id="empty-tasks" class="empty-state">
                     <div class="empty-state-icon">📋</div>
                     <h3>No tasks found</h3>
                     <p>You don't have any tasks assigned to you yet.</p>
@@ -996,32 +673,55 @@
         </div>
     </div>
 
-
+    <!-- Task Update Modal -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Task Status</h3>
+                <button type="button" class="close-modal" id="close-modal-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="task-title">Task</label>
+                    <input type="text" id="task-title" class="form-control" readonly>
+                    <input type="hidden" id="task-id">
+                </div>
+                <div class="form-group">
+                    <label for="task-status">Status</label>
+                    <select id="task-status" class="form-control">
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-progress">Progress (%)</label>
+                    <input type="number" id="task-progress" class="form-control" min="0" max="100" step="5">
+                </div>
+                <div class="form-group">
+                    <label for="task-notes">Notes</label>
+                    <textarea id="task-notes" class="form-control" rows="3" placeholder="Add notes about your progress..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancel-button">Cancel</button>
+                <button type="button" class="btn-save" id="save-button">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize variables
-            let tasksData = [];
-            let filteredTasks = [];
-
-            // Pagination variables
-            let currentPage = 1;
-            const tasksPerPage = 10;
-
-            // Sorting variables
-            let sortField = 'smart';
-            let sortAscending = false; // Default to descending for smart sort (highest priority first)
-
-            // Get DOM elements
+            // DOM elements
             const loadingElement = document.getElementById('loading');
             const errorMessageElement = document.getElementById('error-message');
             const dashboardContentElement = document.getElementById('dashboard-content');
             const tasksTableElement = document.getElementById('tasks-table');
             const tasksBodyElement = document.getElementById('tasks-body');
-            const tasksPaginationElement = document.getElementById('tasks-pagination');
             const emptyTasksElement = document.getElementById('empty-tasks');
             const statusFilterElement = document.getElementById('status-filter');
             const priorityFilterElement = document.getElementById('priority-filter');
+            const taskSearchInput = document.getElementById('task-search');
             const totalTasksElement = document.getElementById('total-tasks');
             const completedTasksElement = document.getElementById('completed-tasks');
             const inProgressTasksElement = document.getElementById('in-progress-tasks');
@@ -1030,82 +730,34 @@
             const userNameElement = document.getElementById('user-name');
             const userEmailElement = document.getElementById('user-email');
 
-            // New UI elements
-            const taskSearchInput = document.getElementById('task-search');
-            const sortSelectElement = document.getElementById('sort-select');
-            const sortDirectionBtn = document.getElementById('sort-direction');
-            const groupSelectElement = document.getElementById('group-select');
+            // Data storage
+            let tasksData = [];
+            let filteredTasks = [];
 
-            // Notification elements
-            const notificationCardElement = document.getElementById('notification-card');
-            const unreadNotificationsElement = document.getElementById('unread-notifications');
-            const notificationsPanelElement = document.getElementById('notifications-panel');
-            const notificationsListElement = document.getElementById('notifications-list');
-            const closeNotificationsBtn = document.getElementById('close-notifications');
-
-            // Notification data
-            let notifications = [];
-            let unreadCount = 0;
-
-
-
-            // Set up periodic refresh for notifications
-            const NOTIFICATION_REFRESH_INTERVAL = 60000; // 1 minute
-            let notificationRefreshTimer = null;
-
-            // Set up periodic refresh for dashboard data
-            const DASHBOARD_REFRESH_INTERVAL = 300000; // 5 minutes
-            let dashboardRefreshTimer = null;
-
-            // Fetch data from API
+            // Fetch dashboard data
             fetchDashboardData();
 
-            // Fetch notifications
-            fetchNotifications();
-
-            // Set up periodic refresh
-            startPeriodicRefresh();
-
             // Add event listeners
-            statusFilterElement.addEventListener('change', filterAndSortTasks);
-            priorityFilterElement.addEventListener('change', filterAndSortTasks);
+            statusFilterElement.addEventListener('change', filterTasks);
+            priorityFilterElement.addEventListener('change', filterTasks);
+            taskSearchInput.addEventListener('input', filterTasks);
 
+            // Add event delegation for update buttons
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('update-btn')) {
+                    const taskId = event.target.dataset.id;
+                    const taskTitle = event.target.dataset.title;
+                    const taskStatus = event.target.dataset.status;
+                    const taskProgress = event.target.dataset.progress;
 
-
-            // New feature event listeners
-            taskSearchInput.addEventListener('input', filterAndSortTasks);
-
-            sortSelectElement.addEventListener('change', function() {
-                sortField = this.value;
-                filterAndSortTasks();
+                    openUpdateModal(taskId, taskTitle, taskStatus, taskProgress);
+                    event.stopPropagation();
+                }
             });
-
-            sortDirectionBtn.addEventListener('click', function() {
-                sortAscending = !sortAscending;
-                this.textContent = sortAscending ? '↑' : '↓';
-                filterAndSortTasks();
-            });
-
-            groupSelectElement.addEventListener('change', function() {
-                filterAndSortTasks();
-            });
-
-            // Notification event listeners
-            if (notificationCardElement) {
-                notificationCardElement.addEventListener('click', function() {
-                    toggleNotificationsPanel();
-                });
-            }
-
-            if (closeNotificationsBtn) {
-                closeNotificationsBtn.addEventListener('click', function() {
-                    notificationsPanelElement.style.display = 'none';
-                });
-            }
 
             // Functions
-            async function fetchDashboardData(silent = false) {
-                // Try both access_token and access
+            async function fetchDashboardData() {
+                // Get token from localStorage
                 const token = localStorage.getItem('access_token') || localStorage.getItem('access');
                 if (!token) {
                     showError('You must be logged in to view this page.');
@@ -1113,28 +765,7 @@
                 }
 
                 try {
-                    // Check if we have cached data that's less than 5 minutes old
-                    const cachedData = localStorage.getItem('dashboard_data');
-                    const cachedTimestamp = localStorage.getItem('dashboard_data_timestamp');
-                    const now = Date.now();
-                    const fiveMinutesInMs = 5 * 60 * 1000;
-
-                    // Use cached data if available and recent
-                    if (cachedData && cachedTimestamp && (now - parseInt(cachedTimestamp)) < fiveMinutesInMs) {
-                        const dashboardData = JSON.parse(cachedData);
-                        processDashboardData(dashboardData);
-
-                        // Show a refresh button
-                        showRefreshButton();
-                        return;
-                    }
-
-                    // Show loading state if not silent
-                    if (!silent && loadingElement) {
-                        loadingElement.style.display = 'block';
-                    }
-
-                    // Fetch dashboard data (includes user profile, task stats, and tasks)
+                    // Fetch dashboard data
                     const response = await fetch('/api/tasks/dashboard/', {
                         headers: {
                             'Authorization': `Bearer ${token}`
@@ -1155,170 +786,25 @@
 
                     const dashboardData = await response.json();
 
-                    // Cache the data
-                    localStorage.setItem('dashboard_data', JSON.stringify(dashboardData));
-                    localStorage.setItem('dashboard_data_timestamp', now.toString());
+                    // Store tasks data
+                    tasksData = dashboardData.assigned_tasks || [];
 
-                    // Process the data
-                    processDashboardData(dashboardData);
+                    // Update user info
+                    updateUserInfo(dashboardData);
 
-                    // Show a brief notification if this was a silent refresh
-                    if (silent) {
-                        showRefreshNotification();
-                    }
+                    // Update dashboard stats
+                    updateDashboardStats(dashboardData);
 
+                    // Render tasks
+                    filterTasks();
+
+                    // Show dashboard content
+                    loadingElement.style.display = 'none';
+                    dashboardContentElement.style.display = 'block';
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
                     showError('Failed to load dashboard data. Please try again later.');
                 }
-            }
-
-            function processDashboardData(dashboardData) {
-                // Store tasks data
-                tasksData = dashboardData.assigned_tasks || [];
-
-                // Add priority score to each task for better sorting
-                tasksData = tasksData.map(task => {
-                    // Calculate priority score based on priority, due date, and status
-                    let priorityScore = 0;
-
-                    // Priority factor
-                    if (task.priority === 'urgent') priorityScore += 100;
-                    else if (task.priority === 'high') priorityScore += 75;
-                    else if (task.priority === 'medium') priorityScore += 50;
-                    else if (task.priority === 'low') priorityScore += 25;
-
-                    // Due date factor - closer due dates get higher priority
-                    if (task.due_date) {
-                        const dueDate = new Date(task.due_date);
-                        const now = new Date();
-                        const daysUntilDue = Math.max(0, Math.floor((dueDate - now) / (1000 * 60 * 60 * 24)));
-
-                        if (dueDate < now) {
-                            // Overdue tasks get highest priority
-                            priorityScore += 200;
-                        } else if (daysUntilDue <= 1) {
-                            // Due today or tomorrow
-                            priorityScore += 150;
-                        } else if (daysUntilDue <= 3) {
-                            // Due within 3 days
-                            priorityScore += 100;
-                        } else if (daysUntilDue <= 7) {
-                            // Due within a week
-                            priorityScore += 50;
-                        }
-                    }
-
-                    // Status factor
-                    if (task.status === 'in_progress') priorityScore += 25; // Prioritize in-progress tasks
-                    if (task.status === 'completed') priorityScore -= 50; // De-prioritize completed tasks
-
-                    return { ...task, priorityScore };
-                });
-
-                // Update user info
-                updateUserInfo(dashboardData);
-
-                // Update dashboard stats
-                updateDashboardStats(dashboardData);
-
-                // Apply filters, sorting, and grouping
-                filterAndSortTasks();
-
-                // Show dashboard content
-                loadingElement.style.display = 'none';
-                dashboardContentElement.style.display = 'block';
-            }
-
-            function showRefreshButton() {
-                // Create refresh button if it doesn't exist
-                if (!document.getElementById('refresh-button')) {
-                    const refreshButton = document.createElement('button');
-                    refreshButton.id = 'refresh-button';
-                    refreshButton.className = 'btn btn-primary';
-                    refreshButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg> Refresh Data';
-                    refreshButton.style.position = 'fixed';
-                    refreshButton.style.bottom = '20px';
-                    refreshButton.style.right = '20px';
-                    refreshButton.style.zIndex = '100';
-                    refreshButton.style.display = 'flex';
-                    refreshButton.style.alignItems = 'center';
-                    refreshButton.style.gap = '5px';
-                    refreshButton.style.padding = '10px 15px';
-
-                    refreshButton.addEventListener('click', function() {
-                        // Clear cache and fetch fresh data
-                        localStorage.removeItem('dashboard_data');
-                        localStorage.removeItem('dashboard_data_timestamp');
-                        fetchDashboardData();
-                        this.style.display = 'none';
-                    });
-
-                    document.body.appendChild(refreshButton);
-                } else {
-                    document.getElementById('refresh-button').style.display = 'flex';
-                }
-            }
-
-            function showRefreshNotification() {
-                // Create a toast notification for silent refresh
-                const toast = document.createElement('div');
-                toast.className = 'refresh-toast';
-                toast.innerHTML = `
-                    <div class="refresh-toast-content">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                        </svg>
-                        <span>Dashboard refreshed</span>
-                    </div>
-                `;
-
-                // Style the toast
-                toast.style.position = 'fixed';
-                toast.style.bottom = '20px';
-                toast.style.left = '20px';
-                toast.style.backgroundColor = 'rgba(67, 97, 238, 0.9)';
-                toast.style.color = 'white';
-                toast.style.padding = '10px 15px';
-                toast.style.borderRadius = '4px';
-                toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                toast.style.zIndex = '1000';
-                toast.style.display = 'flex';
-                toast.style.alignItems = 'center';
-                toast.style.transition = 'opacity 0.5s, transform 0.5s';
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(20px)';
-
-                // Style the content
-                const content = toast.querySelector('.refresh-toast-content');
-                if (content) {
-                    content.style.display = 'flex';
-                    content.style.alignItems = 'center';
-                    content.style.gap = '8px';
-                }
-
-                // Add to the DOM
-                document.body.appendChild(toast);
-
-                // Animate in
-                setTimeout(() => {
-                    toast.style.opacity = '1';
-                    toast.style.transform = 'translateY(0)';
-                }, 10);
-
-                // Remove after 3 seconds
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(20px)';
-
-                    // Remove from DOM after animation completes
-                    setTimeout(() => {
-                        if (toast.parentNode) {
-                            toast.parentNode.removeChild(toast);
-                        }
-                    }, 500);
-                }, 3000);
             }
 
             function updateUserInfo(userData) {
@@ -1335,348 +821,64 @@
             }
 
             function updateDashboardStats(dashboardData) {
-                // Use the statistics directly from the dashboard data
+                // Update task statistics
                 totalTasksElement.textContent = dashboardData.total_tasks || 0;
                 completedTasksElement.textContent = dashboardData.completed_tasks || 0;
                 inProgressTasksElement.textContent = dashboardData.in_progress_tasks || 0;
                 pendingTasksElement.textContent = dashboardData.pending_tasks || 0;
             }
 
-            async function fetchNotifications() {
-                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
-                if (!token) return;
-
-                try {
-                    const response = await fetch('/api/tasks/notifications/', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch notifications');
-                    }
-
-                    notifications = await response.json();
-
-                    // Count unread notifications
-                    unreadCount = notifications.filter(n => !n.read).length;
-
-                    // Update notification badge
-                    updateNotificationBadge();
-
-                    // Render notifications if panel is open
-                    if (notificationsPanelElement && notificationsPanelElement.style.display === 'flex') {
-                        renderNotifications();
-                    }
-                } catch (error) {
-                    console.error('Error fetching notifications:', error);
-                }
-            }
-
-            function updateNotificationBadge() {
-                if (!unreadNotificationsElement || !notificationCardElement) return;
-
-                unreadNotificationsElement.textContent = unreadCount;
-
-                // Add or remove notification badge
-                if (unreadCount > 0) {
-                    // Add badge if it doesn't exist
-                    let badge = notificationCardElement.querySelector('.notification-badge');
-                    if (!badge) {
-                        badge = document.createElement('div');
-                        badge.className = 'notification-badge';
-                        notificationCardElement.appendChild(badge);
-                    }
-                    // Update badge text
-                    badge.textContent = unreadCount;
-                } else {
-                    // Remove badge if it exists
-                    const badge = notificationCardElement.querySelector('.notification-badge');
-                    if (badge) {
-                        badge.remove();
-                    }
-                }
-            }
-
-            function toggleNotificationsPanel() {
-                if (!notificationsPanelElement) return;
-
-                if (notificationsPanelElement.style.display === 'flex') {
-                    notificationsPanelElement.style.display = 'none';
-                } else {
-                    notificationsPanelElement.style.display = 'flex';
-                    renderNotifications();
-                }
-            }
-
-            function renderNotifications() {
-                if (!notificationsListElement) return;
-
-                if (!notifications || notifications.length === 0) {
-                    notificationsListElement.innerHTML = `
-                        <div class="notification-item">
-                            <div class="notification-message">No notifications yet.</div>
-                        </div>
-                    `;
+            function filterTasks() {
+                if (!tasksData || !Array.isArray(tasksData)) {
+                    filteredTasks = [];
+                    renderTasks();
                     return;
                 }
 
-                const notificationsHTML = notifications.map(notification => {
-                    const isUnread = !notification.read;
-                    const date = new Date(notification.created_at);
-                    const formattedDate = date.toLocaleString();
+                const statusFilter = statusFilterElement.value;
+                const priorityFilter = priorityFilterElement.value;
+                const searchTerm = taskSearchInput.value.toLowerCase();
 
-                    return `
-                        <div class="notification-item ${isUnread ? 'unread' : ''}" data-id="${notification.id}">
-                            <div class="notification-header">
-                                <div class="notification-title">${notification.title}</div>
-                                <div class="notification-time">${formattedDate}</div>
-                            </div>
-                            <div class="notification-message">${notification.message}</div>
-                            <div class="notification-actions">
-                                ${notification.related_task ? `
-                                    <a href="/dashboard/tasks/${notification.related_task}/" class="notification-task-link">View Task</a>
-                                ` : ''}
-                                ${isUnread ? `
-                                    <button class="mark-read-btn" data-id="${notification.id}">Mark as read</button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                // Apply filters
+                filteredTasks = tasksData.filter(task => {
+                    // Status filter
+                    const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
 
-                notificationsListElement.innerHTML = notificationsHTML;
+                    // Priority filter
+                    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
 
-                // Add event listeners to mark as read buttons
-                document.querySelectorAll('.mark-read-btn').forEach(button => {
-                    button.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        const notificationId = this.getAttribute('data-id');
-                        markNotificationAsRead(notificationId);
-                    });
+                    // Search filter
+                    const matchesSearch = !searchTerm ||
+                        (task.title && task.title.toLowerCase().includes(searchTerm)) ||
+                        (task.description && task.description.toLowerCase().includes(searchTerm));
+
+                    return matchesStatus && matchesPriority && matchesSearch;
                 });
+
+                renderTasks();
             }
 
-            async function markNotificationAsRead(notificationId) {
-                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
-                if (!token || !notificationId) return;
+            function renderTasks() {
+                // Clear existing tasks
+                tasksBodyElement.innerHTML = '';
 
-                try {
-                    const response = await fetch(`/api/tasks/notifications/${notificationId}/read/`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    if (!response.ok) return;
-
-                    // Update local notification data
-                    const notificationIndex = notifications.findIndex(n => n.id == notificationId);
-                    if (notificationIndex !== -1) {
-                        notifications[notificationIndex].read = true;
-                        unreadCount = Math.max(0, unreadCount - 1);
-
-                        // Update UI
-                        updateNotificationBadge();
-                        renderNotifications();
-                    }
-                } catch (error) {
-                    console.error('Error marking notification as read:', error);
-                }
-            }
-
-            function renderTasks(tasks) {
-                if (!tasksTableElement || !tasksPaginationElement || !emptyTasksElement) return;
-
-                if (!tasks || tasks.length === 0) {
+                if (!filteredTasks.length) {
                     tasksTableElement.style.display = 'none';
-                    tasksPaginationElement.style.display = 'none';
                     emptyTasksElement.style.display = 'block';
                     return;
                 }
 
+                tasksTableElement.style.display = 'table';
                 emptyTasksElement.style.display = 'none';
 
-                // Get grouping option
-                const groupBy = groupSelectElement ? groupSelectElement.value : 'none';
-
-                if (groupBy !== 'none') {
-                    // Render grouped tasks
-                    renderGroupedTasks(tasks);
-                } else {
-                    // Render paginated tasks
-                    renderPaginatedTasks(tasks);
-                }
-            }
-
-            function renderPaginatedTasks(tasks) {
-                if (!tasksTableElement || !tasksBodyElement) return;
-
-                const totalPages = Math.ceil(tasks.length / tasksPerPage);
-
-                // Calculate start and end indices
-                const startIndex = (currentPage - 1) * tasksPerPage;
-                const endIndex = Math.min(startIndex + tasksPerPage, tasks.length);
-
-                // Get current page tasks
-                const currentPageTasks = tasks.slice(startIndex, endIndex);
-
-                // Render current page tasks
-                tasksTableElement.style.display = 'table';
-                tasksBodyElement.innerHTML = '';
-
-                currentPageTasks.forEach(task => {
+                // Render each task
+                filteredTasks.forEach(task => {
                     const row = createTaskRow(task);
-                    if (row) tasksBodyElement.appendChild(row);
+                    tasksBodyElement.appendChild(row);
                 });
-
-                // Render pagination controls
-                renderPaginationControls(totalPages);
-            }
-
-            function renderGroupedTasks(tasks) {
-                if (!tasksPaginationElement || !groupSelectElement) return;
-
-                // Hide pagination for grouped view
-                tasksPaginationElement.style.display = 'none';
-
-                // Group tasks
-                const groups = {};
-                const groupField = groupSelectElement.value;
-
-                if (!groupField) return;
-
-                tasks.forEach(task => {
-                    const groupValue = task[groupField] || 'unknown';
-                    if (!groups[groupValue]) {
-                        groups[groupValue] = [];
-                    }
-                    groups[groupValue].push(task);
-                });
-
-                renderGroupedTableView(groups, groupField);
-            }
-
-            function renderGroupedTableView(groups, groupBy) {
-                if (!tasksTableElement || !tasksBodyElement) return;
-
-                tasksTableElement.style.display = 'table';
-                tasksBodyElement.innerHTML = '';
-
-                // Sort group keys
-                const sortedGroupKeys = getSortedGroupKeys(groups, groupBy);
-                if (!sortedGroupKeys || !sortedGroupKeys.length) return;
-
-                // Render groups
-                sortedGroupKeys.forEach(groupValue => {
-                    if (!groupValue) return;
-
-                    // Create group header
-                    const groupHeader = document.createElement('tr');
-                    groupHeader.className = 'group-header';
-
-                    let groupTitle;
-                    if (groupBy === 'status') {
-                        groupTitle = formatStatus(groupValue);
-                    } else if (groupBy === 'priority') {
-                        groupTitle = capitalizeFirstLetter(groupValue);
-                    } else {
-                        groupTitle = groupValue;
-                    }
-
-                    groupHeader.innerHTML = `
-                        <td colspan="7">
-                            <div class="group-title">
-                                <span class="${groupBy}-label ${groupValue}">${groupTitle}</span>
-                                <span class="group-count">(${groups[groupValue].length} tasks)</span>
-                            </div>
-                        </td>
-                    `;
-
-                    tasksBodyElement.appendChild(groupHeader);
-
-                    // Render tasks in this group
-                    if (groups[groupValue] && Array.isArray(groups[groupValue])) {
-                        groups[groupValue].forEach(task => {
-                            const row = createTaskRow(task);
-                            if (row) tasksBodyElement.appendChild(row);
-                        });
-                    }
-                });
-            }
-
-            function getSortedGroupKeys(groups, groupBy) {
-                if (!groups) return [];
-
-                const keys = Object.keys(groups);
-                if (!keys.length) return [];
-
-                if (groupBy === 'status') {
-                    // Sort status: pending, assigned, in_progress, completed
-                    const statusOrder = { 'pending': 1, 'assigned': 2, 'in_progress': 3, 'completed': 4, 'unknown': 5 };
-                    return keys.sort((a, b) => (statusOrder[a] || 999) - (statusOrder[b] || 999));
-                } else if (groupBy === 'priority') {
-                    // Sort priority: urgent, high, medium, low
-                    const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4, 'unknown': 5 };
-                    return keys.sort((a, b) => (priorityOrder[a] || 999) - (priorityOrder[b] || 999));
-                }
-
-                return keys;
-            }
-
-            function renderPaginationControls(totalPages) {
-                if (!tasksPaginationElement) return;
-
-                // Don't show pagination if only one page
-                if (!totalPages || totalPages <= 1) {
-                    tasksPaginationElement.style.display = 'none';
-                    return;
-                }
-
-                tasksPaginationElement.style.display = 'flex';
-                tasksPaginationElement.innerHTML = '';
-
-                // Create previous button
-                const prevButton = document.createElement('button');
-                prevButton.textContent = '← Previous';
-                prevButton.className = 'btn btn-outline btn-sm';
-                prevButton.disabled = currentPage <= 1;
-                prevButton.addEventListener('click', () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        renderTasks(filteredTasks);
-                    }
-                });
-
-                // Create next button
-                const nextButton = document.createElement('button');
-                nextButton.textContent = 'Next →';
-                nextButton.className = 'btn btn-outline btn-sm';
-                nextButton.disabled = currentPage >= totalPages;
-                nextButton.addEventListener('click', () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        renderTasks(filteredTasks);
-                    }
-                });
-
-                // Create page indicator
-                const pageIndicator = document.createElement('span');
-                pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
-                pageIndicator.className = 'pagination-info';
-
-                // Add elements to pagination container
-                tasksPaginationElement.appendChild(prevButton);
-                tasksPaginationElement.appendChild(pageIndicator);
-                tasksPaginationElement.appendChild(nextButton);
             }
 
             function createTaskRow(task) {
-                if (!task || !task.id) return null;
-
                 const row = document.createElement('tr');
                 row.className = `task-row ${task.priority || 'medium'}`;
 
@@ -1728,6 +930,7 @@
                     </td>
                     <td class="task-actions">
                         <a href="/dashboard/tasks/${task.id}/" class="btn-view">View</a>
+                        ${task.status !== 'completed' ? `<button type="button" class="btn-update update-btn" data-id="${task.id}" data-title="${escapeHtml(task.title)}" data-status="${task.status}" data-progress="${task.progress || 0}">Update</button>` : ''}
                     </td>
                 `;
 
@@ -1749,263 +952,241 @@
                 return row;
             }
 
-
-
-            function filterAndSortTasks() {
-                if (!tasksData || !Array.isArray(tasksData)) {
-                    filteredTasks = [];
-                    renderTasks(filteredTasks);
-                    return;
-                }
-
-                const statusFilter = statusFilterElement ? statusFilterElement.value : 'all';
-                const priorityFilter = priorityFilterElement ? priorityFilterElement.value : 'all';
-                const searchTerm = taskSearchInput && taskSearchInput.value ? taskSearchInput.value.toLowerCase() : '';
-
-                // Reset to first page when filtering
-                currentPage = 1;
-
-                // Apply filters
-                filteredTasks = tasksData.filter(task => {
-                    if (!task) return false;
-
-                    // Status filter
-                    const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-
-                    // Priority filter
-                    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
-
-                    // Search filter - enhanced to search in more fields
-                    const matchesSearch = !searchTerm ||
-                        (task.title && task.title.toLowerCase().includes(searchTerm)) ||
-                        (task.description && task.description.toLowerCase().includes(searchTerm)) ||
-                        (task.assigned_by_name && task.assigned_by_name.toLowerCase().includes(searchTerm)) ||
-                        (task.priority && task.priority.toLowerCase().includes(searchTerm)) ||
-                        (task.status && task.status.toLowerCase().includes(searchTerm));
-
-                    return matchesStatus && matchesPriority && matchesSearch;
-                });
-
-                // Apply smart sorting based on context
-                if (sortField === 'smart') {
-                    // Smart sort prioritizes tasks based on priority score
-                    filteredTasks.sort((a, b) => {
-                        return sortAscending ?
-                            a.priorityScore - b.priorityScore :
-                            b.priorityScore - a.priorityScore;
-                    });
-                } else {
-                    // Apply regular sorting
-                    sortTasks();
-                }
-
-                // Render tasks
-                renderTasks(filteredTasks);
-
-                // Update task count display
-                updateFilteredTaskCount(filteredTasks.length);
-            }
-
-            function updateFilteredTaskCount(count) {
-                // Create or update the filtered task count element
-                let countElement = document.getElementById('filtered-task-count');
-                if (!countElement) {
-                    countElement = document.createElement('div');
-                    countElement.id = 'filtered-task-count';
-                    countElement.className = 'filtered-count';
-                    countElement.style.marginTop = '10px';
-                    countElement.style.fontSize = '0.9rem';
-                    countElement.style.color = 'var(--gray-color)';
-
-                    // Insert after the filters
-                    const filtersContainer = document.querySelector('.task-filters');
-                    if (filtersContainer && filtersContainer.parentNode) {
-                        filtersContainer.parentNode.insertBefore(countElement, filtersContainer.nextSibling);
-                    }
-                }
-
-                // Update the text
-                const totalCount = tasksData.length;
-                if (count === totalCount) {
-                    countElement.textContent = `Showing all ${count} tasks`;
-                } else {
-                    countElement.textContent = `Showing ${count} of ${totalCount} tasks`;
-                }
-            }
-
-            function sortTasks() {
-                if (!filteredTasks || !Array.isArray(filteredTasks)) return;
-
-                filteredTasks.sort((a, b) => {
-                    if (!a || !b) return 0;
-
-                    let valueA, valueB;
-
-                    switch (sortField) {
-                        case 'due_date':
-                            valueA = a.due_date ? new Date(a.due_date) : new Date(9999, 11, 31);
-                            valueB = b.due_date ? new Date(b.due_date) : new Date(9999, 11, 31);
-                            break;
-                        case 'priority':
-                            const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
-                            valueA = priorityOrder[a.priority] || 999;
-                            valueB = priorityOrder[b.priority] || 999;
-                            break;
-                        case 'status':
-                            const statusOrder = { 'pending': 1, 'assigned': 2, 'in_progress': 3, 'completed': 4 };
-                            valueA = statusOrder[a.status] || 999;
-                            valueB = statusOrder[b.status] || 999;
-                            break;
-                        case 'progress':
-                            valueA = a.progress || 0;
-                            valueB = b.progress || 0;
-                            break;
-                        case 'title':
-                            valueA = a.title ? a.title.toLowerCase() : '';
-                            valueB = b.title ? b.title.toLowerCase() : '';
-                            break;
-                        default:
-                            valueA = a.title ? a.title.toLowerCase() : '';
-                            valueB = b.title ? b.title.toLowerCase() : '';
-                    }
-
-                    // Compare values
-                    if (valueA < valueB) return sortAscending ? -1 : 1;
-                    if (valueA > valueB) return sortAscending ? 1 : -1;
-                    return 0;
-                });
-            }
-
-
-
-            function startPeriodicRefresh() {
-                // Clear any existing timers
-                if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
-                if (dashboardRefreshTimer) clearInterval(dashboardRefreshTimer);
-
-                // Set up notification refresh timer
-                notificationRefreshTimer = setInterval(() => {
-                    fetchNotifications();
-                }, NOTIFICATION_REFRESH_INTERVAL);
-
-                // Set up dashboard refresh timer
-                dashboardRefreshTimer = setInterval(() => {
-                    // Only refresh if the user hasn't interacted with the page recently
-                    const lastInteraction = localStorage.getItem('last_interaction_timestamp');
-                    const now = Date.now();
-                    const fiveMinutesInMs = 5 * 60 * 1000;
-
-                    if (!lastInteraction || (now - parseInt(lastInteraction)) > fiveMinutesInMs) {
-                        // Clear cache and fetch fresh data silently
-                        localStorage.removeItem('dashboard_data');
-                        localStorage.removeItem('dashboard_data_timestamp');
-                        fetchDashboardData(true); // true = silent refresh
-                    }
-                }, DASHBOARD_REFRESH_INTERVAL);
-
-                // Track user interaction
-                document.addEventListener('click', updateLastInteraction);
-                document.addEventListener('keydown', updateLastInteraction);
-                document.addEventListener('mousemove', throttle(updateLastInteraction, 60000)); // Throttle to once per minute
-            }
-
-            function updateLastInteraction() {
-                localStorage.setItem('last_interaction_timestamp', Date.now().toString());
-            }
-
-            // Throttle helper function
-            function throttle(func, limit) {
-                let lastFunc;
-                let lastRan;
-                return function() {
-                    const context = this;
-                    const args = arguments;
-                    if (!lastRan) {
-                        func.apply(context, args);
-                        lastRan = Date.now();
-                    } else {
-                        clearTimeout(lastFunc);
-                        lastFunc = setTimeout(function() {
-                            if ((Date.now() - lastRan) >= limit) {
-                                func.apply(context, args);
-                                lastRan = Date.now();
-                            }
-                        }, limit - (Date.now() - lastRan));
-                    }
-                };
-            }
-
             function showError(message) {
-                if (!loadingElement || !errorMessageElement) return;
-
                 loadingElement.style.display = 'none';
-                errorMessageElement.textContent = message || 'An error occurred';
+                errorMessageElement.textContent = message;
                 errorMessageElement.style.display = 'block';
             }
 
             // Helper functions
             function getInitials(name) {
                 if (!name) return '?';
-                try {
-                    return name.split(' ')
-                        .filter(part => part.length > 0)
-                        .map(n => n[0])
-                        .join('')
-                        .toUpperCase();
-                } catch (e) {
-                    return '?';
-                }
+                return name.split(' ')
+                    .filter(part => part.length > 0)
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase();
             }
 
             function formatStatus(status) {
                 if (!status) return 'Unknown';
-                try {
-                    switch(status) {
-                        case 'in_progress':
-                            return 'In Progress';
-                        case 'completed':
-                            return 'Completed';
-                        case 'pending':
-                            return 'Pending';
-                        case 'assigned':
-                            return 'Assigned';
-                        default:
-                            return status.replace(/_/g, ' ')
-                                .replace(/\b\w/g, l => l.toUpperCase());
-                    }
-                } catch (e) {
-                    return status;
+
+                switch(status) {
+                    case 'in_progress':
+                        return 'In Progress';
+                    case 'completed':
+                        return 'Completed';
+                    case 'pending':
+                        return 'Pending';
+                    case 'assigned':
+                        return 'Assigned';
+                    default:
+                        return status.replace(/_/g, ' ')
+                            .replace(/\b\w/g, l => l.toUpperCase());
                 }
             }
 
             function capitalizeFirstLetter(string) {
                 if (!string) return '';
-                try {
-                    return string.charAt(0).toUpperCase() + string.slice(1);
-                } catch (e) {
-                    return string;
-                }
+                return string.charAt(0).toUpperCase() + string.slice(1);
             }
 
             function truncateText(text, maxLength) {
                 if (!text) return '';
-                if (typeof text !== 'string') return '';
                 if (text.length <= maxLength) return text;
                 return text.substring(0, maxLength) + '...';
             }
 
             function escapeHtml(str) {
                 if (!str) return '';
-                try {
-                    const div = document.createElement('div');
-                    div.textContent = str;
-                    return div.innerHTML;
-                } catch (e) {
-                    return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // Modal functions
+            const modal = document.getElementById('update-modal');
+            const taskIdInput = document.getElementById('task-id');
+            const taskTitleInput = document.getElementById('task-title');
+            const taskStatusSelect = document.getElementById('task-status');
+            const taskProgressInput = document.getElementById('task-progress');
+            const taskNotesInput = document.getElementById('task-notes');
+            const closeModalXBtn = document.getElementById('close-modal-x');
+            const cancelButton = document.getElementById('cancel-button');
+            const saveButton = document.getElementById('save-button');
+
+            // Add event listeners for modal buttons
+            closeModalXBtn.addEventListener('click', closeModal);
+            cancelButton.addEventListener('click', closeModal);
+            saveButton.addEventListener('click', updateTaskStatus);
+
+            function openUpdateModal(taskId, taskTitle, taskStatus, taskProgress) {
+                console.log('Opening modal for task:', taskId, taskTitle, taskStatus, taskProgress);
+
+                // Set modal values
+                taskIdInput.value = taskId;
+                taskTitleInput.value = taskTitle;
+                taskStatusSelect.value = taskStatus || 'pending';
+                taskProgressInput.value = taskProgress || 0;
+                taskNotesInput.value = '';
+
+                // Show modal
+                modal.style.display = 'flex';
+
+                // Remove existing event listener to prevent duplicates
+                taskStatusSelect.removeEventListener('change', adjustProgressBasedOnStatus);
+
+                // Add event listener
+                taskStatusSelect.addEventListener('change', adjustProgressBasedOnStatus);
+            }
+
+            function adjustProgressBasedOnStatus() {
+                if (this.value === 'completed') {
+                    taskProgressInput.value = 100;
+                } else if (this.value === 'in_progress' && parseInt(taskProgressInput.value) < 10) {
+                    taskProgressInput.value = 10;
                 }
             }
 
+            function closeModal() {
+                console.log('Closing modal');
+                modal.style.display = 'none';
 
+                // Reset form fields
+                taskIdInput.value = '';
+                taskTitleInput.value = '';
+                taskStatusSelect.value = 'pending';
+                taskProgressInput.value = 0;
+                taskNotesInput.value = '';
+            }
+
+            // Close modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            async function updateTaskStatus() {
+                const taskId = taskIdInput.value;
+                const status = taskStatusSelect.value;
+                const progress = taskProgressInput.value;
+                const notes = taskNotesInput.value;
+
+                console.log('Updating task status:', { taskId, status, progress, notes });
+
+                if (!taskId) {
+                    alert('Task ID is missing');
+                    return;
+                }
+
+                // Validate progress value
+                if (progress < 0 || progress > 100) {
+                    alert('Progress must be between 0 and 100');
+                    return;
+                }
+
+                // Get token from localStorage
+                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                if (!token) {
+                    showError('You must be logged in to update tasks.');
+                    return;
+                }
+
+                try {
+                    // Show loading state
+                    saveButton.disabled = true;
+                    saveButton.textContent = 'Saving...';
+
+                    // Prepare request data - IMPORTANT: The API expects these fields
+                    const requestData = {
+                        task: parseInt(taskId),  // Task ID is required
+                        progress_percentage: parseInt(progress),  // Progress percentage is required
+                        notes: notes || '',  // Notes can be empty
+                        status: status  // Status is optional
+                    };
+
+                    console.log('Sending update for task:', taskId);
+                    console.log('Request URL:', `/api/tasks/${taskId}/progress/`);
+                    console.log('Request data:', requestData);
+
+                    // Send update to API
+                    console.log('Sending request with data:', JSON.stringify(requestData));
+                    const response = await fetch(`/api/tasks/${taskId}/progress/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+
+                    // Log the raw response for debugging
+                    const responseText = await response.text();
+                    console.log('Raw response:', responseText);
+
+                    // Convert back to response object for further processing
+                    const responseObj = new Response(responseText, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: response.headers
+                    });
+
+                    console.log('Response status:', responseObj.status);
+
+                    // Try to parse response as JSON
+                    let responseData;
+                    try {
+                        // Try to parse the response text as JSON
+                        if (responseText.trim()) {
+                            try {
+                                responseData = JSON.parse(responseText);
+                                console.log('Response data:', responseData);
+                            } catch (parseError) {
+                                console.log('Response is not valid JSON:', parseError);
+                                responseData = { error: responseText };
+                            }
+                        } else {
+                            console.log('Empty response');
+                            responseData = {};
+                        }
+
+                        if (!responseObj.ok) {
+                            // Show detailed error message from API
+                            let errorMessage = 'Unknown error';
+                            if (responseData && typeof responseData === 'object') {
+                                errorMessage = Object.entries(responseData)
+                                    .map(([key, value]) => `${key}: ${value}`)
+                                    .join('\n');
+                            } else if (responseText) {
+                                errorMessage = responseText;
+                            }
+                            throw new Error(`Failed to update task status:\n${errorMessage}`);
+                        }
+                    } catch (e) {
+                        if (!responseObj.ok) {
+                            throw new Error(`Failed to update task status: ${responseObj.status} ${responseObj.statusText}\n${e.message}`);
+                        }
+                        console.log('Error processing response:', e);
+                    }
+
+                    // Close modal
+                    closeModal();
+
+                    // Refresh dashboard data
+                    fetchDashboardData();
+
+                    // Show success message
+                    alert('Task status updated successfully!');
+                } catch (error) {
+                    console.error('Error updating task status:', error);
+                    alert(`Failed to update task status: ${error.message}`);
+                } finally {
+                    // Reset button state
+                    saveButton.disabled = false;
+                    saveButton.textContent = 'Save Changes';
+                }
+            }
         });
     </script>
 </body>
