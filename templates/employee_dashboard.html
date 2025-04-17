@@ -244,12 +244,18 @@
 
         .task-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            background-color: white;
+            margin-bottom: 20px;
         }
 
         .task-table th,
         .task-table td {
-            padding: 12px 15px;
+            padding: 16px 20px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
@@ -258,18 +264,32 @@
             background-color: #f8f9fa;
             font-weight: 600;
             color: var(--dark-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .task-table tr:last-child td {
+            border-bottom: none;
         }
 
         .task-table tr:hover {
             background-color: #f8f9fa;
         }
 
+        /* Modern card-like styling */
+        .task-row {
+            transition: all 0.2s ease;
+        }
+
         .task-status {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 500;
+            text-align: center;
+            min-width: 100px;
         }
 
         .task-status.completed {
@@ -277,9 +297,9 @@
             color: var(--success-color);
         }
 
-        .task-status.in-progress {
-            background-color: rgba(255, 152, 0, 0.1);
-            color: var(--warning-color);
+        .task-status.in_progress {
+            background-color: rgba(33, 150, 243, 0.1);
+            color: var(--primary-color);
         }
 
         .task-status.pending, .task-status.assigned {
@@ -289,10 +309,12 @@
 
         .task-priority {
             display: inline-block;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 500;
+            text-align: center;
+            min-width: 100px;
         }
 
         .task-priority.low {
@@ -315,25 +337,93 @@
             color: var(--danger-color);
         }
 
+        /* New styles for enhanced task display */
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .assigned-by {
+            font-size: 0.8rem;
+            color: var(--gray-color);
+        }
+
+        .due-date-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .time-remaining {
+            font-size: 0.8rem;
+            margin-top: 3px;
+        }
+
+        .overdue-text {
+            color: var(--danger-color);
+            font-weight: 500;
+        }
+
+        .today-text {
+            color: var(--danger-color);
+            font-weight: 500;
+        }
+
+        .tomorrow-text {
+            color: var(--warning-color);
+            font-weight: 500;
+        }
+
+        .upcoming-text {
+            color: var(--warning-color);
+        }
+
+        .far-text {
+            color: var(--gray-color);
+        }
+
+        .due-date.overdue {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+
+        .due-date.today {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+
+        .due-date.tomorrow {
+            color: var(--warning-color);
+            font-weight: 600;
+        }
+
         .progress-bar {
             width: 100%;
             height: 8px;
             background-color: #eee;
-            border-radius: 4px;
+            border-radius: 20px;
             overflow: hidden;
+            margin-bottom: 4px;
         }
 
         .progress-fill {
             height: 100%;
             background-color: var(--primary-color);
-            border-radius: 4px;
+            border-radius: 20px;
+        }
+
+        .progress-fill.completed {
+            background-color: var(--success-color);
+        }
+
+        .progress-fill.in-progress {
+            background-color: var(--primary-color);
         }
 
         .progress-text {
             font-size: 0.8rem;
             color: var(--gray-color);
-            margin-top: 5px;
             text-align: right;
+            font-weight: 500;
         }
 
         .task-actions {
@@ -372,6 +462,23 @@
         .btn-outline:hover {
             background-color: var(--primary-color);
             color: white;
+        }
+
+        .btn-view {
+            background-color: white;
+            color: var(--primary-color);
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-view:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
         }
 
         .btn-sm {
@@ -839,6 +946,7 @@
                     <div class="sort-container">
                         <label for="sort-select">Sort by:</label>
                         <select id="sort-select" class="sort-select">
+                            <option value="smart">Smart Sort</option>
                             <option value="due_date">Due Date</option>
                             <option value="priority">Priority</option>
                             <option value="status">Status</option>
@@ -901,8 +1009,8 @@
             const tasksPerPage = 10;
 
             // Sorting variables
-            let sortField = 'due_date';
-            let sortAscending = true;
+            let sortField = 'smart';
+            let sortAscending = false; // Default to descending for smart sort (highest priority first)
 
             // Get DOM elements
             const loadingElement = document.getElementById('loading');
@@ -941,11 +1049,22 @@
 
 
 
+            // Set up periodic refresh for notifications
+            const NOTIFICATION_REFRESH_INTERVAL = 60000; // 1 minute
+            let notificationRefreshTimer = null;
+
+            // Set up periodic refresh for dashboard data
+            const DASHBOARD_REFRESH_INTERVAL = 300000; // 5 minutes
+            let dashboardRefreshTimer = null;
+
             // Fetch data from API
             fetchDashboardData();
 
             // Fetch notifications
             fetchNotifications();
+
+            // Set up periodic refresh
+            startPeriodicRefresh();
 
             // Add event listeners
             statusFilterElement.addEventListener('change', filterAndSortTasks);
@@ -972,16 +1091,20 @@
             });
 
             // Notification event listeners
-            notificationCardElement.addEventListener('click', function() {
-                toggleNotificationsPanel();
-            });
+            if (notificationCardElement) {
+                notificationCardElement.addEventListener('click', function() {
+                    toggleNotificationsPanel();
+                });
+            }
 
-            closeNotificationsBtn.addEventListener('click', function() {
-                notificationsPanelElement.style.display = 'none';
-            });
+            if (closeNotificationsBtn) {
+                closeNotificationsBtn.addEventListener('click', function() {
+                    notificationsPanelElement.style.display = 'none';
+                });
+            }
 
             // Functions
-            async function fetchDashboardData() {
+            async function fetchDashboardData(silent = false) {
                 // Try both access_token and access
                 const token = localStorage.getItem('access_token') || localStorage.getItem('access');
                 if (!token) {
@@ -990,6 +1113,27 @@
                 }
 
                 try {
+                    // Check if we have cached data that's less than 5 minutes old
+                    const cachedData = localStorage.getItem('dashboard_data');
+                    const cachedTimestamp = localStorage.getItem('dashboard_data_timestamp');
+                    const now = Date.now();
+                    const fiveMinutesInMs = 5 * 60 * 1000;
+
+                    // Use cached data if available and recent
+                    if (cachedData && cachedTimestamp && (now - parseInt(cachedTimestamp)) < fiveMinutesInMs) {
+                        const dashboardData = JSON.parse(cachedData);
+                        processDashboardData(dashboardData);
+
+                        // Show a refresh button
+                        showRefreshButton();
+                        return;
+                    }
+
+                    // Show loading state if not silent
+                    if (!silent && loadingElement) {
+                        loadingElement.style.display = 'block';
+                    }
+
                     // Fetch dashboard data (includes user profile, task stats, and tasks)
                     const response = await fetch('/api/tasks/dashboard/', {
                         headers: {
@@ -1011,25 +1155,170 @@
 
                     const dashboardData = await response.json();
 
-                    // Store tasks data
-                    tasksData = dashboardData.assigned_tasks || [];
+                    // Cache the data
+                    localStorage.setItem('dashboard_data', JSON.stringify(dashboardData));
+                    localStorage.setItem('dashboard_data_timestamp', now.toString());
 
-                    // Update user info
-                    updateUserInfo(dashboardData);
+                    // Process the data
+                    processDashboardData(dashboardData);
 
-                    // Update dashboard stats
-                    updateDashboardStats(dashboardData);
+                    // Show a brief notification if this was a silent refresh
+                    if (silent) {
+                        showRefreshNotification();
+                    }
 
-                    // Apply filters, sorting, and grouping
-                    filterAndSortTasks();
-
-                    // Show dashboard content
-                    loadingElement.style.display = 'none';
-                    dashboardContentElement.style.display = 'block';
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
                     showError('Failed to load dashboard data. Please try again later.');
                 }
+            }
+
+            function processDashboardData(dashboardData) {
+                // Store tasks data
+                tasksData = dashboardData.assigned_tasks || [];
+
+                // Add priority score to each task for better sorting
+                tasksData = tasksData.map(task => {
+                    // Calculate priority score based on priority, due date, and status
+                    let priorityScore = 0;
+
+                    // Priority factor
+                    if (task.priority === 'urgent') priorityScore += 100;
+                    else if (task.priority === 'high') priorityScore += 75;
+                    else if (task.priority === 'medium') priorityScore += 50;
+                    else if (task.priority === 'low') priorityScore += 25;
+
+                    // Due date factor - closer due dates get higher priority
+                    if (task.due_date) {
+                        const dueDate = new Date(task.due_date);
+                        const now = new Date();
+                        const daysUntilDue = Math.max(0, Math.floor((dueDate - now) / (1000 * 60 * 60 * 24)));
+
+                        if (dueDate < now) {
+                            // Overdue tasks get highest priority
+                            priorityScore += 200;
+                        } else if (daysUntilDue <= 1) {
+                            // Due today or tomorrow
+                            priorityScore += 150;
+                        } else if (daysUntilDue <= 3) {
+                            // Due within 3 days
+                            priorityScore += 100;
+                        } else if (daysUntilDue <= 7) {
+                            // Due within a week
+                            priorityScore += 50;
+                        }
+                    }
+
+                    // Status factor
+                    if (task.status === 'in_progress') priorityScore += 25; // Prioritize in-progress tasks
+                    if (task.status === 'completed') priorityScore -= 50; // De-prioritize completed tasks
+
+                    return { ...task, priorityScore };
+                });
+
+                // Update user info
+                updateUserInfo(dashboardData);
+
+                // Update dashboard stats
+                updateDashboardStats(dashboardData);
+
+                // Apply filters, sorting, and grouping
+                filterAndSortTasks();
+
+                // Show dashboard content
+                loadingElement.style.display = 'none';
+                dashboardContentElement.style.display = 'block';
+            }
+
+            function showRefreshButton() {
+                // Create refresh button if it doesn't exist
+                if (!document.getElementById('refresh-button')) {
+                    const refreshButton = document.createElement('button');
+                    refreshButton.id = 'refresh-button';
+                    refreshButton.className = 'btn btn-primary';
+                    refreshButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg> Refresh Data';
+                    refreshButton.style.position = 'fixed';
+                    refreshButton.style.bottom = '20px';
+                    refreshButton.style.right = '20px';
+                    refreshButton.style.zIndex = '100';
+                    refreshButton.style.display = 'flex';
+                    refreshButton.style.alignItems = 'center';
+                    refreshButton.style.gap = '5px';
+                    refreshButton.style.padding = '10px 15px';
+
+                    refreshButton.addEventListener('click', function() {
+                        // Clear cache and fetch fresh data
+                        localStorage.removeItem('dashboard_data');
+                        localStorage.removeItem('dashboard_data_timestamp');
+                        fetchDashboardData();
+                        this.style.display = 'none';
+                    });
+
+                    document.body.appendChild(refreshButton);
+                } else {
+                    document.getElementById('refresh-button').style.display = 'flex';
+                }
+            }
+
+            function showRefreshNotification() {
+                // Create a toast notification for silent refresh
+                const toast = document.createElement('div');
+                toast.className = 'refresh-toast';
+                toast.innerHTML = `
+                    <div class="refresh-toast-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                        </svg>
+                        <span>Dashboard refreshed</span>
+                    </div>
+                `;
+
+                // Style the toast
+                toast.style.position = 'fixed';
+                toast.style.bottom = '20px';
+                toast.style.left = '20px';
+                toast.style.backgroundColor = 'rgba(67, 97, 238, 0.9)';
+                toast.style.color = 'white';
+                toast.style.padding = '10px 15px';
+                toast.style.borderRadius = '4px';
+                toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                toast.style.zIndex = '1000';
+                toast.style.display = 'flex';
+                toast.style.alignItems = 'center';
+                toast.style.transition = 'opacity 0.5s, transform 0.5s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+
+                // Style the content
+                const content = toast.querySelector('.refresh-toast-content');
+                if (content) {
+                    content.style.display = 'flex';
+                    content.style.alignItems = 'center';
+                    content.style.gap = '8px';
+                }
+
+                // Add to the DOM
+                document.body.appendChild(toast);
+
+                // Animate in
+                setTimeout(() => {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateY(0)';
+                }, 10);
+
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(20px)';
+
+                    // Remove from DOM after animation completes
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 500);
+                }, 3000);
             }
 
             function updateUserInfo(userData) {
@@ -1077,7 +1366,7 @@
                     updateNotificationBadge();
 
                     // Render notifications if panel is open
-                    if (notificationsPanelElement.style.display === 'flex') {
+                    if (notificationsPanelElement && notificationsPanelElement.style.display === 'flex') {
                         renderNotifications();
                     }
                 } catch (error) {
@@ -1086,20 +1375,21 @@
             }
 
             function updateNotificationBadge() {
+                if (!unreadNotificationsElement || !notificationCardElement) return;
+
                 unreadNotificationsElement.textContent = unreadCount;
 
                 // Add or remove notification badge
                 if (unreadCount > 0) {
                     // Add badge if it doesn't exist
-                    if (!notificationCardElement.querySelector('.notification-badge')) {
-                        const badge = document.createElement('div');
+                    let badge = notificationCardElement.querySelector('.notification-badge');
+                    if (!badge) {
+                        badge = document.createElement('div');
                         badge.className = 'notification-badge';
-                        badge.textContent = unreadCount;
                         notificationCardElement.appendChild(badge);
-                    } else {
-                        // Update existing badge
-                        notificationCardElement.querySelector('.notification-badge').textContent = unreadCount;
                     }
+                    // Update badge text
+                    badge.textContent = unreadCount;
                 } else {
                     // Remove badge if it exists
                     const badge = notificationCardElement.querySelector('.notification-badge');
@@ -1110,6 +1400,8 @@
             }
 
             function toggleNotificationsPanel() {
+                if (!notificationsPanelElement) return;
+
                 if (notificationsPanelElement.style.display === 'flex') {
                     notificationsPanelElement.style.display = 'none';
                 } else {
@@ -1119,7 +1411,9 @@
             }
 
             function renderNotifications() {
-                if (notifications.length === 0) {
+                if (!notificationsListElement) return;
+
+                if (!notifications || notifications.length === 0) {
                     notificationsListElement.innerHTML = `
                         <div class="notification-item">
                             <div class="notification-message">No notifications yet.</div>
@@ -1166,7 +1460,7 @@
 
             async function markNotificationAsRead(notificationId) {
                 const token = localStorage.getItem('access_token') || localStorage.getItem('access');
-                if (!token) return;
+                if (!token || !notificationId) return;
 
                 try {
                     const response = await fetch(`/api/tasks/notifications/${notificationId}/read/`, {
@@ -1177,9 +1471,7 @@
                         }
                     });
 
-                    if (!response.ok) {
-                        throw new Error('Failed to mark notification as read');
-                    }
+                    if (!response.ok) return;
 
                     // Update local notification data
                     const notificationIndex = notifications.findIndex(n => n.id == notificationId);
@@ -1197,7 +1489,9 @@
             }
 
             function renderTasks(tasks) {
-                if (tasks.length === 0) {
+                if (!tasksTableElement || !tasksPaginationElement || !emptyTasksElement) return;
+
+                if (!tasks || tasks.length === 0) {
                     tasksTableElement.style.display = 'none';
                     tasksPaginationElement.style.display = 'none';
                     emptyTasksElement.style.display = 'block';
@@ -1207,7 +1501,7 @@
                 emptyTasksElement.style.display = 'none';
 
                 // Get grouping option
-                const groupBy = groupSelectElement.value;
+                const groupBy = groupSelectElement ? groupSelectElement.value : 'none';
 
                 if (groupBy !== 'none') {
                     // Render grouped tasks
@@ -1219,6 +1513,8 @@
             }
 
             function renderPaginatedTasks(tasks) {
+                if (!tasksTableElement || !tasksBodyElement) return;
+
                 const totalPages = Math.ceil(tasks.length / tasksPerPage);
 
                 // Calculate start and end indices
@@ -1234,7 +1530,7 @@
 
                 currentPageTasks.forEach(task => {
                     const row = createTaskRow(task);
-                    tasksBodyElement.appendChild(row);
+                    if (row) tasksBodyElement.appendChild(row);
                 });
 
                 // Render pagination controls
@@ -1242,32 +1538,42 @@
             }
 
             function renderGroupedTasks(tasks) {
+                if (!tasksPaginationElement || !groupSelectElement) return;
+
                 // Hide pagination for grouped view
                 tasksPaginationElement.style.display = 'none';
 
                 // Group tasks
                 const groups = {};
+                const groupField = groupSelectElement.value;
+
+                if (!groupField) return;
 
                 tasks.forEach(task => {
-                    const groupValue = task[groupSelectElement.value];
+                    const groupValue = task[groupField] || 'unknown';
                     if (!groups[groupValue]) {
                         groups[groupValue] = [];
                     }
                     groups[groupValue].push(task);
                 });
 
-                renderGroupedTableView(groups, groupSelectElement.value);
+                renderGroupedTableView(groups, groupField);
             }
 
             function renderGroupedTableView(groups, groupBy) {
+                if (!tasksTableElement || !tasksBodyElement) return;
+
                 tasksTableElement.style.display = 'table';
                 tasksBodyElement.innerHTML = '';
 
                 // Sort group keys
                 const sortedGroupKeys = getSortedGroupKeys(groups, groupBy);
+                if (!sortedGroupKeys || !sortedGroupKeys.length) return;
 
                 // Render groups
                 sortedGroupKeys.forEach(groupValue => {
+                    if (!groupValue) return;
+
                     // Create group header
                     const groupHeader = document.createElement('tr');
                     groupHeader.className = 'group-header';
@@ -1293,32 +1599,39 @@
                     tasksBodyElement.appendChild(groupHeader);
 
                     // Render tasks in this group
-                    groups[groupValue].forEach(task => {
-                        const row = createTaskRow(task);
-                        tasksBodyElement.appendChild(row);
-                    });
+                    if (groups[groupValue] && Array.isArray(groups[groupValue])) {
+                        groups[groupValue].forEach(task => {
+                            const row = createTaskRow(task);
+                            if (row) tasksBodyElement.appendChild(row);
+                        });
+                    }
                 });
             }
 
             function getSortedGroupKeys(groups, groupBy) {
+                if (!groups) return [];
+
                 const keys = Object.keys(groups);
+                if (!keys.length) return [];
 
                 if (groupBy === 'status') {
                     // Sort status: pending, assigned, in_progress, completed
-                    const statusOrder = { 'pending': 1, 'assigned': 2, 'in_progress': 3, 'completed': 4 };
-                    return keys.sort((a, b) => statusOrder[a] - statusOrder[b]);
+                    const statusOrder = { 'pending': 1, 'assigned': 2, 'in_progress': 3, 'completed': 4, 'unknown': 5 };
+                    return keys.sort((a, b) => (statusOrder[a] || 999) - (statusOrder[b] || 999));
                 } else if (groupBy === 'priority') {
                     // Sort priority: urgent, high, medium, low
-                    const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
-                    return keys.sort((a, b) => priorityOrder[a] - priorityOrder[b]);
+                    const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4, 'unknown': 5 };
+                    return keys.sort((a, b) => (priorityOrder[a] || 999) - (priorityOrder[b] || 999));
                 }
 
                 return keys;
             }
 
             function renderPaginationControls(totalPages) {
+                if (!tasksPaginationElement) return;
+
                 // Don't show pagination if only one page
-                if (totalPages <= 1) {
+                if (!totalPages || totalPages <= 1) {
                     tasksPaginationElement.style.display = 'none';
                     return;
                 }
@@ -1330,7 +1643,7 @@
                 const prevButton = document.createElement('button');
                 prevButton.textContent = '← Previous';
                 prevButton.className = 'btn btn-outline btn-sm';
-                prevButton.disabled = currentPage === 1;
+                prevButton.disabled = currentPage <= 1;
                 prevButton.addEventListener('click', () => {
                     if (currentPage > 1) {
                         currentPage--;
@@ -1342,7 +1655,7 @@
                 const nextButton = document.createElement('button');
                 nextButton.textContent = 'Next →';
                 nextButton.className = 'btn btn-outline btn-sm';
-                nextButton.disabled = currentPage === totalPages;
+                nextButton.disabled = currentPage >= totalPages;
                 nextButton.addEventListener('click', () => {
                     if (currentPage < totalPages) {
                         currentPage++;
@@ -1362,63 +1675,76 @@
             }
 
             function createTaskRow(task) {
+                if (!task || !task.id) return null;
+
                 const row = document.createElement('tr');
-                row.className = `task-row ${task.priority}`;
+                row.className = `task-row ${task.priority || 'medium'}`;
 
-                // Format due date with highlighting
-                let dueDateClass = '';
+                // Format due date
                 let formattedDate = 'No due date';
-
                 if (task.due_date) {
-                    const dueDate = new Date(task.due_date);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-
-                    const tomorrow = new Date(today);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-
-                    const nextWeek = new Date(today);
-                    nextWeek.setDate(nextWeek.getDate() + 7);
-
-                    formattedDate = dueDate.toLocaleDateString();
-
-                    if (dueDate < today) {
-                        dueDateClass = 'overdue';
-                    } else if (dueDate.getTime() === today.getTime()) {
-                        dueDateClass = 'today';
-                    } else if (dueDate < nextWeek) {
-                        dueDateClass = 'upcoming';
-                    } else {
-                        dueDateClass = 'far';
+                    try {
+                        const dueDate = new Date(task.due_date);
+                        formattedDate = dueDate.toLocaleDateString('en-US', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+                    } catch (e) {
+                        console.error('Error parsing date:', e);
                     }
                 }
 
                 // Get progress value
                 const progress = task.progress || 0;
+                const isCompleted = task.status === 'completed';
+                const progressFillClass = isCompleted ? 'completed' : (task.status === 'in_progress' ? 'in-progress' : '');
 
                 // Create description with truncation
                 const description = task.description ? truncateText(task.description, 50) : 'No description';
+                const priority = task.priority || 'medium';
+                const status = task.status || 'pending';
+
+                // Format status text
+                let statusText = formatStatus(status);
 
                 row.innerHTML = `
-                    <td>${escapeHtml(task.title)}</td>
+                    <td>
+                        <div class="task-title">${escapeHtml(task.title || 'Untitled Task')}</div>
+                    </td>
                     <td>${escapeHtml(description)}</td>
                     <td>
-                        <span class="task-priority ${task.priority}">${capitalizeFirstLetter(task.priority)}</span>
+                        <span class="task-priority ${priority}">${capitalizeFirstLetter(priority)}</span>
                     </td>
                     <td>
-                        <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
+                        <span class="task-status ${status}">${statusText}</span>
                     </td>
-                    <td><span class="due-date ${dueDateClass}">${formattedDate}</span></td>
+                    <td>${formattedDate}</td>
                     <td>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
+                            <div class="progress-fill ${progressFillClass}" style="width: ${progress}%"></div>
                         </div>
                         <div class="progress-text">${progress}%</div>
                     </td>
                     <td class="task-actions">
-                        <a href="/dashboard/tasks/${task.id}/" class="btn btn-outline btn-sm">View</a>
+                        <a href="/dashboard/tasks/${task.id}/" class="btn-view">View</a>
                     </td>
                 `;
+
+                // Add click event to row for better UX
+                row.addEventListener('click', function(e) {
+                    // Don't navigate if clicking on a button or link
+                    if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' ||
+                        e.target.closest('a') || e.target.closest('button')) {
+                        return;
+                    }
+
+                    // Navigate to task detail page
+                    window.location.href = `/dashboard/tasks/${task.id}/`;
+                });
+
+                // Add cursor style to indicate clickable row
+                row.style.cursor = 'pointer';
 
                 return row;
             }
@@ -1426,38 +1752,93 @@
 
 
             function filterAndSortTasks() {
-                const statusFilter = statusFilterElement.value;
-                const priorityFilter = priorityFilterElement.value;
-                const searchTerm = taskSearchInput.value.toLowerCase();
+                if (!tasksData || !Array.isArray(tasksData)) {
+                    filteredTasks = [];
+                    renderTasks(filteredTasks);
+                    return;
+                }
+
+                const statusFilter = statusFilterElement ? statusFilterElement.value : 'all';
+                const priorityFilter = priorityFilterElement ? priorityFilterElement.value : 'all';
+                const searchTerm = taskSearchInput && taskSearchInput.value ? taskSearchInput.value.toLowerCase() : '';
 
                 // Reset to first page when filtering
                 currentPage = 1;
 
                 // Apply filters
                 filteredTasks = tasksData.filter(task => {
+                    if (!task) return false;
+
                     // Status filter
                     const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
 
                     // Priority filter
                     const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
 
-                    // Search filter
+                    // Search filter - enhanced to search in more fields
                     const matchesSearch = !searchTerm ||
-                        task.title.toLowerCase().includes(searchTerm) ||
-                        (task.description && task.description.toLowerCase().includes(searchTerm));
+                        (task.title && task.title.toLowerCase().includes(searchTerm)) ||
+                        (task.description && task.description.toLowerCase().includes(searchTerm)) ||
+                        (task.assigned_by_name && task.assigned_by_name.toLowerCase().includes(searchTerm)) ||
+                        (task.priority && task.priority.toLowerCase().includes(searchTerm)) ||
+                        (task.status && task.status.toLowerCase().includes(searchTerm));
 
                     return matchesStatus && matchesPriority && matchesSearch;
                 });
 
-                // Apply sorting
-                sortTasks();
+                // Apply smart sorting based on context
+                if (sortField === 'smart') {
+                    // Smart sort prioritizes tasks based on priority score
+                    filteredTasks.sort((a, b) => {
+                        return sortAscending ?
+                            a.priorityScore - b.priorityScore :
+                            b.priorityScore - a.priorityScore;
+                    });
+                } else {
+                    // Apply regular sorting
+                    sortTasks();
+                }
 
                 // Render tasks
                 renderTasks(filteredTasks);
+
+                // Update task count display
+                updateFilteredTaskCount(filteredTasks.length);
+            }
+
+            function updateFilteredTaskCount(count) {
+                // Create or update the filtered task count element
+                let countElement = document.getElementById('filtered-task-count');
+                if (!countElement) {
+                    countElement = document.createElement('div');
+                    countElement.id = 'filtered-task-count';
+                    countElement.className = 'filtered-count';
+                    countElement.style.marginTop = '10px';
+                    countElement.style.fontSize = '0.9rem';
+                    countElement.style.color = 'var(--gray-color)';
+
+                    // Insert after the filters
+                    const filtersContainer = document.querySelector('.task-filters');
+                    if (filtersContainer && filtersContainer.parentNode) {
+                        filtersContainer.parentNode.insertBefore(countElement, filtersContainer.nextSibling);
+                    }
+                }
+
+                // Update the text
+                const totalCount = tasksData.length;
+                if (count === totalCount) {
+                    countElement.textContent = `Showing all ${count} tasks`;
+                } else {
+                    countElement.textContent = `Showing ${count} of ${totalCount} tasks`;
+                }
             }
 
             function sortTasks() {
+                if (!filteredTasks || !Array.isArray(filteredTasks)) return;
+
                 filteredTasks.sort((a, b) => {
+                    if (!a || !b) return 0;
+
                     let valueA, valueB;
 
                     switch (sortField) {
@@ -1467,25 +1848,25 @@
                             break;
                         case 'priority':
                             const priorityOrder = { 'urgent': 1, 'high': 2, 'medium': 3, 'low': 4 };
-                            valueA = priorityOrder[a.priority] || 0;
-                            valueB = priorityOrder[b.priority] || 0;
+                            valueA = priorityOrder[a.priority] || 999;
+                            valueB = priorityOrder[b.priority] || 999;
                             break;
                         case 'status':
                             const statusOrder = { 'pending': 1, 'assigned': 2, 'in_progress': 3, 'completed': 4 };
-                            valueA = statusOrder[a.status] || 0;
-                            valueB = statusOrder[b.status] || 0;
+                            valueA = statusOrder[a.status] || 999;
+                            valueB = statusOrder[b.status] || 999;
                             break;
                         case 'progress':
                             valueA = a.progress || 0;
                             valueB = b.progress || 0;
                             break;
                         case 'title':
-                            valueA = a.title.toLowerCase();
-                            valueB = b.title.toLowerCase();
+                            valueA = a.title ? a.title.toLowerCase() : '';
+                            valueB = b.title ? b.title.toLowerCase() : '';
                             break;
                         default:
-                            valueA = a.title.toLowerCase();
-                            valueB = b.title.toLowerCase();
+                            valueA = a.title ? a.title.toLowerCase() : '';
+                            valueB = b.title ? b.title.toLowerCase() : '';
                     }
 
                     // Compare values
@@ -1497,38 +1878,131 @@
 
 
 
+            function startPeriodicRefresh() {
+                // Clear any existing timers
+                if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
+                if (dashboardRefreshTimer) clearInterval(dashboardRefreshTimer);
+
+                // Set up notification refresh timer
+                notificationRefreshTimer = setInterval(() => {
+                    fetchNotifications();
+                }, NOTIFICATION_REFRESH_INTERVAL);
+
+                // Set up dashboard refresh timer
+                dashboardRefreshTimer = setInterval(() => {
+                    // Only refresh if the user hasn't interacted with the page recently
+                    const lastInteraction = localStorage.getItem('last_interaction_timestamp');
+                    const now = Date.now();
+                    const fiveMinutesInMs = 5 * 60 * 1000;
+
+                    if (!lastInteraction || (now - parseInt(lastInteraction)) > fiveMinutesInMs) {
+                        // Clear cache and fetch fresh data silently
+                        localStorage.removeItem('dashboard_data');
+                        localStorage.removeItem('dashboard_data_timestamp');
+                        fetchDashboardData(true); // true = silent refresh
+                    }
+                }, DASHBOARD_REFRESH_INTERVAL);
+
+                // Track user interaction
+                document.addEventListener('click', updateLastInteraction);
+                document.addEventListener('keydown', updateLastInteraction);
+                document.addEventListener('mousemove', throttle(updateLastInteraction, 60000)); // Throttle to once per minute
+            }
+
+            function updateLastInteraction() {
+                localStorage.setItem('last_interaction_timestamp', Date.now().toString());
+            }
+
+            // Throttle helper function
+            function throttle(func, limit) {
+                let lastFunc;
+                let lastRan;
+                return function() {
+                    const context = this;
+                    const args = arguments;
+                    if (!lastRan) {
+                        func.apply(context, args);
+                        lastRan = Date.now();
+                    } else {
+                        clearTimeout(lastFunc);
+                        lastFunc = setTimeout(function() {
+                            if ((Date.now() - lastRan) >= limit) {
+                                func.apply(context, args);
+                                lastRan = Date.now();
+                            }
+                        }, limit - (Date.now() - lastRan));
+                    }
+                };
+            }
+
             function showError(message) {
+                if (!loadingElement || !errorMessageElement) return;
+
                 loadingElement.style.display = 'none';
-                errorMessageElement.textContent = message;
+                errorMessageElement.textContent = message || 'An error occurred';
                 errorMessageElement.style.display = 'block';
             }
 
             // Helper functions
             function getInitials(name) {
                 if (!name) return '?';
-                return name.split(' ').map(n => n[0]).join('').toUpperCase();
+                try {
+                    return name.split(' ')
+                        .filter(part => part.length > 0)
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase();
+                } catch (e) {
+                    return '?';
+                }
             }
 
             function formatStatus(status) {
                 if (!status) return 'Unknown';
-                return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                try {
+                    switch(status) {
+                        case 'in_progress':
+                            return 'In Progress';
+                        case 'completed':
+                            return 'Completed';
+                        case 'pending':
+                            return 'Pending';
+                        case 'assigned':
+                            return 'Assigned';
+                        default:
+                            return status.replace(/_/g, ' ')
+                                .replace(/\b\w/g, l => l.toUpperCase());
+                    }
+                } catch (e) {
+                    return status;
+                }
             }
 
             function capitalizeFirstLetter(string) {
                 if (!string) return '';
-                return string.charAt(0).toUpperCase() + string.slice(1);
+                try {
+                    return string.charAt(0).toUpperCase() + string.slice(1);
+                } catch (e) {
+                    return string;
+                }
             }
 
             function truncateText(text, maxLength) {
+                if (!text) return '';
+                if (typeof text !== 'string') return '';
                 if (text.length <= maxLength) return text;
                 return text.substring(0, maxLength) + '...';
             }
 
             function escapeHtml(str) {
                 if (!str) return '';
-                const div = document.createElement('div');
-                div.textContent = str;
-                return div.innerHTML;
+                try {
+                    const div = document.createElement('div');
+                    div.textContent = str;
+                    return div.innerHTML;
+                } catch (e) {
+                    return '';
+                }
             }
 
 

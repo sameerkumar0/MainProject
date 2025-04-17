@@ -90,11 +90,12 @@ class TaskDetailSerializer(TaskSerializer):
 class TaskProgressSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
+    status = serializers.CharField(required=False, write_only=True)
 
     class Meta:
         model = TaskProgress
         fields = ['id', 'task', 'task_title', 'updated_by', 'updated_by_name', 'progress_percentage',
-                 'notes', 'created_at', 'time_spent', 'status_change']
+                 'notes', 'created_at', 'time_spent', 'status_change', 'status']
         read_only_fields = ['created_at', 'status_change']
 
 

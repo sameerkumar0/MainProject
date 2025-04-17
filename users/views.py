@@ -364,7 +364,7 @@ def employee_dashboard(request):
         }
     }
 
-    return render(request, 'employee_dashboard.html', context)
+    return render(request, 'new_employee_dashboard.html', context)
 
 
 class ManagerDashboardAPIView(generics.RetrieveAPIView):

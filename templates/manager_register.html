@@ -363,7 +363,7 @@
       <button type="submit">Register</button>
     </form>
     <p class="login-link">
-      Already have an account? <a href="{% url 'manager-login' %}">Login</a>
+      Already have an account? <a href="{% url 'manager_login' %}">Login</a>
     </p>
   </div>
 
@@ -454,7 +454,7 @@
 
         if (response.ok) {
           alert("Manager registered successfully!");
-          window.location.href = "{% url 'manager-login' %}";
+          window.location.href = "{% url 'manager_login' %}";
         } else {
           let errorMsg = "";
           for (let key in data) {

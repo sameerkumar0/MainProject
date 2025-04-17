@@ -148,7 +148,7 @@
 
             // Initialize
             fetchActivities();
-            
+
             // Event listeners
             applyFiltersBtn.addEventListener('click', applyFilters);
             resetFiltersBtn.addEventListener('click', resetFilters);
@@ -156,7 +156,7 @@
             // Functions
             async function fetchActivities() {
                 showLoading();
-                
+
                 try {
                     // Get JWT token
                     const token = localStorage.getItem('access_token') || localStorage.getItem('access');
@@ -195,24 +195,24 @@
 
                     const data = await response.json();
                     activities = Array.isArray(data) ? data : data.results || [];
-                    
+
                     // Extract unique users for the filter
                     const uniqueUsers = new Set();
                     activities.forEach(activity => {
-                        if (activity.user && activity.user_name) {
+                        if (activity.user && activity.username) {
                             uniqueUsers.add(JSON.stringify({
                                 id: activity.user,
-                                name: activity.user_name
+                                name: activity.username
                             }));
                         }
                     });
-                    
+
                     users = Array.from(uniqueUsers).map(user => JSON.parse(user));
                     populateUserFilter();
-                    
+
                     // Display activities
                     renderActivities();
-                    
+
                 } catch (error) {
                     console.error('Error fetching activities:', error);
                     showError(error.message);
@@ -226,19 +226,19 @@
                 }
 
                 activitiesList.innerHTML = '';
-                
+
                 activities.forEach(activity => {
                     const row = document.createElement('tr');
                     row.className = 'activity-item hover:bg-gray-50';
-                    
+
                     // Format the activity type for display
                     const activityType = formatActivityType(activity.activity_type);
-                    
+
                     // Format the date
                     const createdAt = new Date(activity.created_at);
                     const formattedDate = createdAt.toLocaleDateString();
                     const formattedTime = createdAt.toLocaleTimeString();
-                    
+
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
@@ -251,14 +251,14 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">${activity.user_name || 'Unknown User'}</div>
+                            <div class="text-sm font-medium text-gray-900">${activity.username || 'Unknown User'}</div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm text-gray-900">${activity.description}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            ${activity.task_title ? 
-                                `<a href="/dashboard/tasks/${activity.related_task}/" class="text-indigo-600 hover:text-indigo-900">${activity.task_title}</a>` : 
+                            ${activity.task_title ?
+                                `<a href="/dashboard/tasks/${activity.related_task}/" class="text-indigo-600 hover:text-indigo-900">${activity.task_title}</a>` :
                                 '<span class="text-gray-500">N/A</span>'
                             }
                         </td>
@@ -267,10 +267,10 @@
                             <div>${formattedTime}</div>
                         </td>
                     `;
-                    
+
                     activitiesList.appendChild(row);
                 });
-                
+
                 hideLoading();
                 activitiesContainer.classList.remove('hidden');
             }
@@ -280,7 +280,7 @@
                 while (userFilter.options.length > 1) {
                     userFilter.remove(1);
                 }
-                
+
                 // Add user options
                 users.forEach(user => {
                     const option = document.createElement('option');
@@ -297,7 +297,7 @@
                     dateFrom: dateFrom.value,
                     dateTo: dateTo.value
                 };
-                
+
                 fetchActivities();
             }
 
@@ -306,20 +306,20 @@
                 userFilter.value = 'all';
                 dateFrom.value = '';
                 dateTo.value = '';
-                
+
                 currentFilters = {
                     activityType: 'all',
                     userId: 'all',
                     dateFrom: '',
                     dateTo: ''
                 };
-                
+
                 fetchActivities();
             }
 
             function formatActivityType(type) {
                 if (!type) return 'Unknown';
-                
+
                 // Convert snake_case to Title Case with spaces
                 return type
                     .split('_')

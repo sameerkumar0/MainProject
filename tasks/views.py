@@ -1,24 +1,21 @@
 from rest_framework import generics, permissions, status, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404, render
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
+
+from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
-from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
+from django.db import transaction
 from datetime import timedelta, datetime
+
 from .models import Task, TaskAssignment, TaskProgress, Notification, UserActivity
 from .serializers import *
-from .permissions import IsManager, IsEmployee,IsTaskAssignedToEmployee
+from .permissions import IsManager, IsEmployee, IsTaskAssignedToEmployee
 from notifications.email_services import send_email_notification
-from django.db import transaction
-from django.shortcuts import render, redirect
-from rest_framework.exceptions import ValidationError
-from django.contrib.auth.decorators import login_required
 from users.models import CustomUser
-from rest_framework.views import View
-from django.http import HttpResponseForbidden, JsonResponse
-from rest_framework.permissions import IsAuthenticated
 
 # Task Creation View (Separate)
 class TaskCreateView(APIView):
@@ -461,7 +458,6 @@ def task_assign(request):
             task_id = data.get('task_id')
             employee_id = data.get('employee_id')
             due_date = data.get('due_date')
-            note = data.get('note')
 
             if not task_id or not employee_id:
                 return JsonResponse({"error": "Both task and employee are required"}, status=400)
@@ -646,11 +642,36 @@ class TaskProgressListCreateView(generics.ListCreateAPIView):
     List all progress updates for a task or create a new progress update.
     """
     serializer_class = TaskProgressSerializer
-    permission_classes = [permissions.IsAuthenticated,IsManager]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         task_id = self.kwargs.get('task_id')
         return TaskProgress.objects.filter(task_id=task_id)
+
+    def create(self, request, *args, **kwargs):
+        # Get task_id from URL
+        task_id = self.kwargs.get('task_id')
+
+        # Make a mutable copy of the request data
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+
+        # If task is not in request data, add it
+        if 'task' not in data:
+            data['task'] = task_id
+
+        # Add updated_by if not present
+        if 'updated_by' not in data:
+            data['updated_by'] = request.user.id
+
+        # Remove status field if present (we'll handle it in perform_create)
+        if 'status' in data:
+            # Store it in the request for later use
+            request.status_value = data.pop('status')
+
+        # Update the request data
+        request._full_data = data
+
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         task_id = self.kwargs.get('task_id')
@@ -658,15 +679,43 @@ class TaskProgressListCreateView(generics.ListCreateAPIView):
 
         # Check if user is associated with this task
         user = self.request.user
-        if user.role != 'Manager' and task.assigned_to != user:
-            raise ValidationError("You can only update progress on tasks assigned to you.")
+
+        # For employees, check if the task is assigned to them
+        if user.role == 'Employee':
+            if not TaskAssignment.objects.filter(task=task, employee=user).exists():
+                raise ValidationError("You can only update progress on tasks assigned to you.")
 
         # Validate progress percentage
         progress_percentage = serializer.validated_data.get('progress_percentage')
         if not (0 <= progress_percentage <= 100):
             raise ValidationError("Progress percentage must be between 0 and 100.")
 
-        serializer.save(task=task, updated_by=user)
+        # Get status if provided from the request
+        status_value = getattr(self.request, 'status_value', None)
+
+        # Create the progress update (without the status field)
+        progress_update = serializer.save(task=task, updated_by=user)
+
+        # Update task progress and status
+        task.progress = progress_percentage
+
+        # Update task status based on progress or explicit status
+        if status_value:
+            task.status = status_value
+        elif progress_percentage == 100:
+            task.status = 'completed'
+
+            # Update task assignment if completed
+            if user.role == 'Employee':
+                assignment = TaskAssignment.objects.filter(task=task, employee=user).first()
+                if assignment and not assignment.completed_at:
+                    assignment.completed_at = timezone.now()
+                    assignment.save()
+        elif progress_percentage > 0 and task.status in ['pending', 'assigned']:
+            task.status = 'in_progress'
+
+        # Save the task
+        task.save()
 
 
 class NotificationListView(generics.ListCreateAPIView):
