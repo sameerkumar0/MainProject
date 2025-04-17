@@ -330,8 +330,58 @@ class EmployeeProfileView(APIView):
         serializer = EmployeeSerializer(user)
         return Response(serializer.data)
 
-def employee_profile(request):
-    return render(request,'employee_profile.html')
+    def patch(self, request, pk=None):
+        # Determine which user to update
+        if pk and request.user.role == UserRoles.MANAGER:
+            # Managers can update any employee's profile
+            try:
+                user = CustomUser.objects.get(pk=pk, role=UserRoles.EMPLOYEE)
+            except CustomUser.DoesNotExist:
+                return Response({"detail": "Employee not found."}, status=404)
+        elif not pk:
+            # Users can update their own profile
+            user = request.user
+            if user.role != UserRoles.EMPLOYEE:
+                return Response({"detail": "Only employees can update their profile."}, status=403)
+        else:
+            # Employees can't update other employees' profiles
+            return Response({"detail": "You are not authorized to update this profile."}, status=403)
+
+        # Create a serializer with the user and partial data
+        serializer = EmployeeSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            # Handle password update separately if provided
+            if 'password' in request.data and request.data['password']:
+                from django.contrib.auth.hashers import make_password
+                user.password = make_password(request.data['password'])
+
+            # Save the serializer (which will update other fields)
+            serializer.save()
+
+            # Return the updated user data
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def employee_profile(request, pk=None):
+    # Get the employee by pk if provided, otherwise use the current user
+    context = {}
+
+    # Always add the current user's ID to the context
+    if request.user.is_authenticated:
+        context['current_user_id'] = request.user.id
+
+    if pk:
+        try:
+            employee = CustomUser.objects.get(pk=pk, role=UserRoles.EMPLOYEE)
+            context['employee_id'] = pk
+        except CustomUser.DoesNotExist:
+            # Handle case where employee doesn't exist
+            from django.http import HttpResponseNotFound
+            return HttpResponseNotFound("Employee not found")
+
+    return render(request, 'employee_profile.html', context)
 
 
 @login_required

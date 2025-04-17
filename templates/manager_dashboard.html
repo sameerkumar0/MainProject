@@ -6,16 +6,16 @@
     <title>Manager Dashboard - Employee Tasks</title>
     <style>
         :root {
-            --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --light-color: #ecf0f1;
-            --dark-color: #2c3e50;
-            --gray-color: #95a5a6;
-            --border-radius: 8px;
-            --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --primary-color: #3b82f6;
+            --secondary-color: #1f2937;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --light-color: #f9fafb;
+            --dark-color: #111827;
+            --gray-color: #6b7280;
+            --border-radius: 0.75rem;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         * {
@@ -26,16 +26,33 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f7fa;
+            background: linear-gradient(135deg, #f0f9ff 0%, #f5f7fa 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
             color: #333;
             line-height: 1.6;
         }
 
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233b82f6' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            z-index: -1;
+            opacity: 0.5;
+        }
+
         header {
-            background-color: var(--secondary-color);
+            background: linear-gradient(90deg, var(--secondary-color) 0%, #2d3748 100%);
             color: white;
             padding: 1rem 0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
         }
 
         .header-container {
@@ -44,20 +61,61 @@
             align-items: center;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 2rem;
         }
 
         /* Notification styles */
         .notification-icon {
             position: relative;
-            margin-right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
             cursor: pointer;
+            color: white;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            margin-right: 0.75rem;
         }
 
         .notification-icon svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             fill: white;
+        }
+
+        .notification-icon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .notification-icon:active {
+            transform: translateY(0);
+        }
+
+        @keyframes bellRing {
+            0% { transform: rotate(0); }
+            10% { transform: rotate(10deg); }
+            20% { transform: rotate(-10deg); }
+            30% { transform: rotate(6deg); }
+            40% { transform: rotate(-6deg); }
+            50% { transform: rotate(3deg); }
+            60% { transform: rotate(-3deg); }
+            70% { transform: rotate(1deg); }
+            80% { transform: rotate(-1deg); }
+            90% { transform: rotate(0); }
+            100% { transform: rotate(0); }
+        }
+
+        .notification-icon.has-notifications svg {
+            animation: bellRing 1s ease-in-out;
+            animation-iteration-count: 1;
         }
 
         .notification-badge {
@@ -66,14 +124,24 @@
             right: -5px;
             background-color: var(--danger-color);
             color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            border-radius: 9999px;
+            min-width: 1.5rem;
+            height: 1.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: bold;
+            padding: 0 0.25rem;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
         .notifications-panel {
@@ -85,143 +153,381 @@
             max-height: 80vh;
             background-color: white;
             border-radius: var(--border-radius);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             z-index: 100;
             overflow: hidden;
             display: none;
             flex-direction: column;
+            border: 1px solid rgba(229, 231, 235, 0.8);
+            transform-origin: top right;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .notifications-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            background-color: var(--secondary-color);
-            color: white;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(to right, #f9fafb, #f3f4f6);
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
         }
 
         .notifications-header h3 {
-            margin: 0;
             font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .notifications-header h3::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .notifications-close-btn {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.375rem;
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+
+        .notifications-close-btn:hover {
+            background: rgba(59, 130, 246, 0.15);
+            transform: translateY(-1px);
         }
 
         .notifications-list {
             overflow-y: auto;
             max-height: calc(80vh - 60px);
             padding: 0;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+
+        .notifications-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .notifications-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .notifications-list::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
         }
 
         .notification-item {
-            padding: 15px 20px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #f3f4f6;
+            transition: all 0.2s ease;
+            position: relative;
         }
 
         .notification-item:hover {
-            background-color: #f9f9f9;
+            background-color: #f9fafb;
+            transform: translateY(-1px);
         }
 
         .notification-item.unread {
-            background-color: #f0f7ff;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
+        .notification-item.unread::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--primary-color);
         }
 
         .notification-item.unread:hover {
-            background-color: #e6f2ff;
+            background-color: rgba(59, 130, 246, 0.08);
         }
 
         .notification-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 5px;
+            margin-bottom: 0.5rem;
         }
 
         .notification-title {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--dark-color);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .notification-title::before {
+            content: '';
+            display: inline-block;
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .notification-item.unread .notification-title::before {
+            background-color: var(--danger-color);
         }
 
         .notification-time {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--gray-color);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background-color: rgba(243, 244, 246, 0.5);
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 500;
+        }
+
+        .notification-time::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236b7280' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
 
         .notification-message {
-            font-size: 0.9rem;
-            color: var(--dark-color);
-            margin-bottom: 10px;
+            font-size: 0.875rem;
+            color: var(--gray-color);
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
         }
 
         .notification-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed rgba(203, 213, 225, 0.5);
         }
 
         .notification-task-link {
-            font-size: 0.8rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.375rem;
             color: var(--primary-color);
+            font-size: 0.75rem;
+            font-weight: 500;
             text-decoration: none;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
         .notification-task-link:hover {
-            text-decoration: underline;
+            background: rgba(59, 130, 246, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .notification-task-link::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%233b82f6' viewBox='0 0 24 24'%3E%3Cpath d='M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
 
         .mark-read-btn {
-            font-size: 0.8rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 0.375rem;
             color: var(--primary-color);
-            background: none;
-            border: none;
+            font-size: 0.75rem;
+            font-weight: 500;
             cursor: pointer;
-            padding: 0;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
         .mark-read-btn:hover {
-            text-decoration: underline;
+            background: rgba(59, 130, 246, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .mark-read-btn::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%233b82f6' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
 
         .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.75rem;
+            font-weight: 800;
             color: white;
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            transition: transform 0.3s;
+        }
+
+        .logo:hover {
+            transform: translateY(-1px);
         }
 
         .logo span {
             color: var(--primary-color);
+            background: linear-gradient(90deg, #60a5fa 0%, #93c5fd 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo::before {
+            content: '';
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            background-color: var(--primary-color);
+            border-radius: 0.25rem;
+            transform: rotate(45deg);
+            margin-right: 0.25rem;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
         }
 
         .nav-links {
             display: flex;
-            gap: 20px;
+            gap: 1.5rem;
+            align-items: center;
         }
 
         .nav-links a {
             color: white;
             text-decoration: none;
-            padding: 5px 10px;
-            border-radius: var(--border-radius);
-            transition: background-color 0.3s;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            position: relative;
         }
 
         .nav-links a:hover {
             background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .nav-links a.logout-link {
+            color: #fecaca;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .nav-links a.logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .nav-links a.logout-link::before {
+            content: '';
+            display: inline-block;
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: #fecaca;
+            border-radius: 50%;
+            margin-right: 0.25rem;
         }
 
         .container {
             max-width: 1200px;
-            margin: 20px auto;
-            padding: 0 20px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .page-title {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0) 100%);
+        }
+
+        .page-title h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--dark-color);
+            position: relative;
+            padding-left: 1rem;
+            line-height: 1.2;
+        }
+
+        .page-title h1::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.25rem;
+            bottom: 0.25rem;
+            width: 4px;
+            background: linear-gradient(180deg, var(--primary-color) 0%, #60a5fa 100%);
+            border-radius: 2px;
         }
 
         .page-actions {
@@ -412,38 +718,41 @@
             font-size: 0.8rem;
         }
 
-        .task-list {
+        .task-count-container {
             margin-top: 15px;
-        }
-
-        .task-list-title {
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--dark-color);
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            justify-content: center;
         }
 
-        .task-count {
-            background-color: var(--light-color);
-            color: var(--dark-color);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-
-        .task-item {
-            padding: 10px;
+        .task-count-badge {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.2) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
             border-radius: var(--border-radius);
-            margin-bottom: 8px;
-            background-color: #f8f9fa;
+            padding: 12px 20px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
-        .task-title {
+        .task-count-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .task-count-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .task-count-label {
+            font-size: 0.85rem;
+            color: var(--gray-color);
             font-weight: 500;
         }
 
@@ -470,9 +779,40 @@
 
         .employee-actions {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 20px;
+        }
+
+        .action-icon {
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .view-tasks-btn {
+            flex: 1;
+            transition: all 0.3s ease;
+        }
+
+        .view-tasks-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+        }
+
+        .assign-task-btn {
+            flex: 1;
+            transition: all 0.3s ease;
+        }
+
+        .assign-task-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         /* Modal styles */
@@ -647,7 +987,7 @@
                 </div>
                 <a href="/auth/manager/employee-tasks/">Employee Tasks</a>
                 <a href="/api/tasks/activities/view/">Activity Log</a>
-                <a href="/auth/logout/">Logout</a>
+                <a href="/auth/logout/" class="logout-link">Logout</a>
             </nav>
         </div>
     </header>
@@ -657,7 +997,7 @@
         <div id="notifications-panel" class="notifications-panel">
             <div class="notifications-header">
                 <h3>Notifications</h3>
-                <button id="close-notifications" class="btn btn-sm btn-outline">×</button>
+                <button id="close-notifications" class="notifications-close-btn">×</button>
             </div>
             <div id="notifications-list" class="notifications-list">
                 <div class="notification-loading">Loading notifications...</div>
@@ -1049,18 +1389,7 @@
                 // Get assigned tasks
                 const assignedTasks = employee.assigned_tasks || [];
 
-                // Create task list HTML
-                let taskListHTML = '';
-                if (assignedTasks.length > 0) {
-                    taskListHTML = assignedTasks.map(task => `
-                        <div class="task-item">
-                            <span class="task-title">${task.title}</span>
-                            <span class="task-status ${task.status}">${formatStatus(task.status)}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    taskListHTML = '<div class="empty-state" style="padding: 20px 0;"><p>No tasks assigned yet</p></div>';
-                }
+                // We don't need to create task list HTML anymore, just use the task counts
 
                 div.innerHTML = `
                     <div class="employee-header">
@@ -1074,16 +1403,27 @@
                         <div class="tech-stack-title">Tech Stack</div>
                         <div class="tech-stack-content">${techStack}</div>
                     </div>
-                    <div class="task-list">
-                        <div class="task-list-title">
-                            <span>Assigned Tasks</span>
-                            <span class="task-count">${taskCounts.total || 0}</span>
+                    <div class="task-count-container">
+                        <div class="task-count-badge">
+                            <span class="task-count-number">${taskCounts.total || 0}</span>
+                            <span class="task-count-label">Tasks Assigned</span>
                         </div>
-                        ${taskListHTML}
                     </div>
                     <div class="employee-actions">
-                        <button class="btn btn-outline btn-sm view-tasks-btn" data-id="${employee.id}">View Tasks</button>
-                        <button class="btn btn-primary btn-sm assign-task-btn" data-id="${employee.id}" data-name="${employee.first_name} ${employee.last_name}">Assign Task</button>
+                        <button class="btn btn-primary btn-sm view-tasks-btn" data-id="${employee.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-icon">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            View All Tasks
+                        </button>
+                        <button class="btn btn-outline btn-sm assign-task-btn" data-id="${employee.id}" data-name="${employee.first_name} ${employee.last_name}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-icon">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Assign Task
+                        </button>
                     </div>
                 `;
 
@@ -1273,10 +1613,20 @@
 
             function updateNotificationBadge() {
                 if (unreadCount > 0) {
+                    // Update badge count
                     notificationBadge.textContent = unreadCount;
                     notificationBadge.style.display = 'flex';
+
+                    // Add animation class to bell
+                    notificationIcon.classList.add('has-notifications');
+
+                    // Reset animation after it completes
+                    setTimeout(() => {
+                        notificationIcon.classList.remove('has-notifications');
+                    }, 1000);
                 } else {
                     notificationBadge.style.display = 'none';
+                    notificationIcon.classList.remove('has-notifications');
                 }
             }
 

@@ -916,7 +916,7 @@ class EmployeeTaskListView(generics.ListAPIView):
     Includes task statistics and supports filtering by status, priority, and due date.
     """
     serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated, IsEmployee]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'due_date', 'priority', 'status']
@@ -924,11 +924,28 @@ class EmployeeTaskListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        employee_id = self.kwargs.get('employee_id', None)
 
-        # Get tasks assigned to the employee with optimized query
-        queryset = Task.objects.select_related('assigned_by').prefetch_related(
-            'assignments', 'progress_updates'
-        ).filter(assignments__employee=user)
+        # If employee_id is provided and user is a manager, get tasks for that employee
+        if employee_id and user.role == 'Manager':
+            from users.models import CustomUser
+            try:
+                employee = CustomUser.objects.get(id=employee_id, role='Employee')
+                queryset = Task.objects.select_related('assigned_by').prefetch_related(
+                    'assignments', 'progress_updates'
+                ).filter(assignments__employee=employee)
+            except CustomUser.DoesNotExist:
+                return Task.objects.none()
+        # If user is an employee, get their tasks
+        elif user.role == 'Employee':
+            queryset = Task.objects.select_related('assigned_by').prefetch_related(
+                'assignments', 'progress_updates'
+            ).filter(assignments__employee=user)
+        # If user is a manager and no employee_id is provided, get all tasks
+        else:
+            queryset = Task.objects.select_related('assigned_by').prefetch_related(
+                'assignments', 'progress_updates'
+            ).all()
 
         # Apply filters using a single query
         filter_params = {}

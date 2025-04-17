@@ -27,7 +27,8 @@ urlpatterns = [
 
     # Employee management API endpoints
     path('employees/', EmployeeListView.as_view(), name='employee_list_api'),
-    path('employees/<int:pk>/profile/', EmployeeProfileView.as_view(), name='employee_profile_api'),
+    path('employees/profile/', EmployeeProfileView.as_view(), name='employee_profile_api'),
+    path('employees/<int:pk>/profile/', EmployeeProfileView.as_view(), name='employee_specific_profile_api'),
 
     # Manager API endpoints
     path('manager/dashboard/', ManagerDashboardAPIView.as_view(), name='manager_dashboard_api'),

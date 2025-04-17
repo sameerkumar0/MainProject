@@ -14,6 +14,7 @@ urlpatterns = [
     # Task API endpoints
     path('', TaskListView.as_view(), name='task-list'),
     path('employee/', EmployeeTaskListView.as_view(), name='employee-task-list'),
+    path('employee/<int:employee_id>/tasks/', EmployeeTaskListView.as_view(), name='employee-specific-task-list'),
     path('unassigned/', UnassignedTasksView.as_view(), name='unassigned-tasks'),
     path('<int:pk>/', TaskDetailView.as_view(), name='task-detail'),
     path('create/', TaskCreateView.as_view(), name='task-create'),

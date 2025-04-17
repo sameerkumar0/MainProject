@@ -2,154 +2,589 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Task List</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
-    .high-priority { background-color: #fff3cd; }
-    .urgent-priority { background-color: #f8d7da; }
+    :root {
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --danger-color: #ef4444;
+      --light-bg: #f9fafb;
+    }
+
+    body {
+      background-color: var(--light-bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .card {
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .task-stats {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      flex: 1;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .total-tasks .stat-value { color: var(--primary-color); }
+    .completed-tasks .stat-value { color: var(--success-color); }
+    .in-progress-tasks .stat-value { color: var(--warning-color); }
+    .pending-tasks .stat-value { color: var(--danger-color); }
+
+    .filters-card {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-card {
+      background-color: white;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table thead th {
+      background-color: #f3f4f6;
+      color: #374151;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .priority-low {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .priority-medium {
+      background-color: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .priority-high {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .priority-urgent {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-pending {
+      background-color: #e5e7eb;
+      color: #4b5563;
+    }
+
+    .status-in-progress {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-completed {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: background-color 0.2s;
+    }
+
+    .view-btn {
+      background-color: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .view-btn:hover {
+      background-color: #bae6fd;
+    }
+
+    .update-btn {
+      background-color: #f0fdf4;
+      color: #166534;
+    }
+
+    .update-btn:hover {
+      background-color: #dcfce7;
+    }
+
+    .progress-bar {
+      height: 0.5rem;
+      border-radius: 9999px;
+      background-color: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .progress-value {
+      height: 100%;
+      background-color: var(--primary-color);
+    }
+
+    .due-soon {
+      background-color: #fffbeb;
+    }
+
+    .overdue {
+      background-color: #fef2f2;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #d1d5db;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 0.25rem solid #e5e7eb;
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .task-stats {
+        flex-wrap: wrap;
+      }
+
+      .stat-card {
+        flex-basis: calc(50% - 0.5rem);
+      }
+    }
   </style>
 </head>
-<body class="bg-light">
+<body>
   <div class="container py-4">
-    {% if is_manager_view and employee %}
-    <h2 class="mb-4" id="role-title">Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
-    {% elif is_manager_view %}
-    <h2 class="mb-4" id="role-title">All Tasks</h2>
-    {% else %}
-    <h2 class="mb-4" id="role-title">My Tasks</h2>
-    {% endif %}
+    <div class="page-header">
+      {% if is_manager_view and employee %}
+      <h2 id="role-title">Tasks for {{ employee.first_name }} {{ employee.last_name }}</h2>
+      {% elif is_manager_view %}
+      <h2 id="role-title">All Tasks</h2>
+      {% else %}
+      <h2 id="role-title">My Tasks</h2>
+      {% endif %}
+
+      <div class="header-actions">
+        <button id="refresh-btn" class="btn btn-outline-primary">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Task Statistics -->
+    <div class="task-stats" id="task-stats">
+      <div class="stat-card total-tasks">
+        <div class="stat-value" id="total-count">0</div>
+        <div class="stat-label">Total Tasks</div>
+      </div>
+      <div class="stat-card completed-tasks">
+        <div class="stat-value" id="completed-count">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card in-progress-tasks">
+        <div class="stat-value" id="in-progress-count">0</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-card pending-tasks">
+        <div class="stat-value" id="pending-count">0</div>
+        <div class="stat-label">Pending</div>
+      </div>
+    </div>
 
     <!-- Filters -->
-    <form id="filter-form" class="row g-3 mb-4">
-      <div class="col-md-3">
-        <input type="text" name="search" class="form-control" placeholder="Search task..." />
-      </div>
-      <div class="col-md-2">
-        <select name="status" class="form-select">
-          <option value="">Status</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-      <div class="col-md-2">
-        <select name="priority" class="form-select">
-          <option value="">Priority</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-        </select>
-      </div>
-      <div class="col-md-2">
-        <input type="date" name="due_date_from" class="form-control" placeholder="From Due Date" />
-      </div>
-      <div class="col-md-2">
-        <input type="date" name="due_date_to" class="form-control" placeholder="To Due Date" />
-      </div>
-      <div class="col-md-1 d-grid">
-        <button type="submit" class="btn btn-primary">Filter</button>
-      </div>
-    </form>
+    <div class="filters-card">
+      <form id="filter-form" class="row g-3">
+        <div class="col-md-3">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="search" class="form-control" placeholder="Search task..." />
+          </div>
+        </div>
+        <div class="col-md-2">
+          <select name="status" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="priority" class="form-select">
+            <option value="">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <input type="date" name="due_date_from" class="form-control" placeholder="From Due Date" />
+        </div>
+        <div class="col-md-2">
+          <input type="date" name="due_date_to" class="form-control" placeholder="To Due Date" />
+        </div>
+        <div class="col-md-1 d-grid">
+          <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+    </div>
 
     <!-- Task List Table -->
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-          <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Priority</th>
-            <th>Due Date</th>
-          </tr>
-        </thead>
-        <tbody id="task-table-body">
-          <!-- Dynamic Rows Here -->
-        </tbody>
-      </table>
+    <div id="task-table-container" class="table-card" style="display: none;">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Due Date</th>
+              <th>Progress</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="task-table-body">
+            <!-- Dynamic Rows Here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="empty-icon"><i class="bi bi-clipboard-x"></i></div>
+      <h3>No Tasks Found</h3>
+      <p>There are no tasks matching your criteria.</p>
     </div>
   </div>
 
   <script>
+    // DOM Elements
     const taskTableBody = document.getElementById('task-table-body');
     const roleTitle = document.getElementById('role-title');
+    const loadingElement = document.getElementById('loading');
+    const taskTableContainer = document.getElementById('task-table-container');
+    const emptyStateElement = document.getElementById('empty-state');
+    const filterForm = document.getElementById('filter-form');
+    const refreshBtn = document.getElementById('refresh-btn');
+
+    // Task statistics elements
+    const totalCountElement = document.getElementById('total-count');
+    const completedCountElement = document.getElementById('completed-count');
+    const inProgressCountElement = document.getElementById('in-progress-count');
+    const pendingCountElement = document.getElementById('pending-count');
 
     // Set API endpoint based on context
     let apiEndpoint = '/api/tasks/';
     {% if is_manager_view and employee %}
-    apiEndpoint = '/api/employee/{{ employee.id }}/tasks/';
+    apiEndpoint = '/api/tasks/employee/{{ employee.id }}/tasks/';
     {% elif is_manager_view %}
     apiEndpoint = '/api/tasks/';
     {% else %}
-    apiEndpoint = '/api/employee/tasks/';
+    apiEndpoint = '/api/tasks/employee/';
     {% endif %}
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initial fetch
+      fetchTasks();
+
+      // Filter form submission
+      filterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(filterForm);
+        const queryParams = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+          if (value) queryParams.append(key, value);
+        }
+
+        fetchTasks(queryParams.toString() ? `?${queryParams.toString()}` : '');
+      });
+
+      // Refresh button
+      refreshBtn.addEventListener('click', () => {
+        filterForm.reset();
+        fetchTasks();
+      });
+    });
 
     async function fetchTasks(query = '') {
       try {
-        const res = await fetch(`${apiEndpoint}${query}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access')}`  // JWT Token
-          }
-        });
-        const tasks = await res.json();
+        // Show loading indicator
+        loadingElement.style.display = 'flex';
+        taskTableContainer.style.display = 'none';
+        emptyStateElement.style.display = 'none';
 
-        // Clear old data
-        taskTableBody.innerHTML = '';
-
-        if (tasks.length === 0) {
-          taskTableBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
+        const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+        if (!token) {
+          showError('Authentication token not found. Please log in again.');
+          return;
         }
 
-        // Debug: Log the tasks data
-        console.log('Tasks data in employee_task_list:', tasks);
-
-        tasks.forEach(task => {
-          // Debug: Log each task
-          console.log('Processing task:', task);
-
-          const tr = document.createElement('tr');
-
-          // Ensure we have valid data for each field
-          const title = task.title || 'No title';
-          const description = task.description || 'No description';
-          const status = task.status || 'pending';
-          const priority = task.priority || 'medium';
-          const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : '-';
-
-          // Debug: Log the extracted values
-          console.log('Extracted values:', { title, description, status, priority, dueDate });
-
-          if (priority === 'urgent') tr.classList.add('urgent-priority');
-          else if (priority === 'high') tr.classList.add('high-priority');
-
-          tr.innerHTML = `
-            <td>${title}</td>
-            <td>${description}</td>
-            <td>${status}</td>
-            <td>${priority}</td>
-            <td>${dueDate}</td>
-          `;
-          taskTableBody.appendChild(tr);
+        const res = await fetch(`${apiEndpoint}${query}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
-        // Title is already set in the HTML based on user role
+        if (res.status === 401) {
+          showError('Your session has expired. Please login again.');
+          setTimeout(() => {
+            window.location.href = '/auth/login/';
+          }, 2000);
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch tasks: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+
+        // Get tasks array (handle both formats)
+        const tasks = Array.isArray(data) ? data : (data.results || []);
+
+        // Update task statistics
+        updateTaskStats(data.task_stats || calculateTaskStats(tasks));
+
+        // Render tasks
+        renderTasks(tasks);
 
       } catch (error) {
         console.error('Error fetching tasks:', error);
+        showError(error.message);
+      } finally {
+        // Hide loading indicator
+        loadingElement.style.display = 'none';
       }
     }
 
-    // Initial load
-    fetchTasks();
+    function calculateTaskStats(tasks) {
+      const stats = {
+        total: tasks.length,
+        completed: 0,
+        in_progress: 0,
+        pending: 0
+      };
 
-    // Filter form submit
-    document.getElementById('filter-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      const formData = new FormData(this);
-      const params = new URLSearchParams(formData).toString();
-      fetchTasks('?' + params);
-    });
+      tasks.forEach(task => {
+        if (task.status === 'completed') {
+          stats.completed++;
+        } else if (task.status === 'in_progress') {
+          stats.in_progress++;
+        } else {
+          stats.pending++;
+        }
+      });
+
+      return stats;
+    }
+
+    function updateTaskStats(stats) {
+      totalCountElement.textContent = stats.total || 0;
+      completedCountElement.textContent = stats.completed || 0;
+      inProgressCountElement.textContent = stats.in_progress || 0;
+      pendingCountElement.textContent = stats.pending || 0;
+    }
+
+    function renderTasks(tasks) {
+      // Clear old data
+      taskTableBody.innerHTML = '';
+
+      if (!tasks || tasks.length === 0) {
+        // Show empty state
+        taskTableContainer.style.display = 'none';
+        emptyStateElement.style.display = 'block';
+        return;
+      }
+
+      // Show table
+      taskTableContainer.style.display = 'block';
+      emptyStateElement.style.display = 'none';
+
+      // Process and render each task
+      tasks.forEach(task => {
+        const row = document.createElement('tr');
+
+        // Add warning classes for due dates
+        if (task.due_date) {
+          const dueDate = new Date(task.due_date);
+          const today = new Date();
+          const twoDaysFromNow = new Date();
+          twoDaysFromNow.setDate(today.getDate() + 2);
+
+          if (dueDate < today) {
+            row.classList.add('overdue');
+          } else if (dueDate <= twoDaysFromNow) {
+            row.classList.add('due-soon');
+          }
+        }
+
+        // Format due date
+        let dueDateDisplay = 'No due date';
+        if (task.due_date) {
+          const dueDate = new Date(task.due_date);
+          dueDateDisplay = dueDate.toLocaleDateString();
+        }
+
+        // Format status badge
+        const statusClass = `status-${task.status.replace('_', '-')}`;
+        const statusDisplay = task.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        // Format priority badge
+        const priorityClass = `priority-${task.priority || 'medium'}`;
+        const priorityDisplay = (task.priority || 'medium').replace(/\b\w/g, l => l.toUpperCase());
+
+        // Create task row
+        row.innerHTML = `
+          <td>
+            <div class="fw-bold">${task.title}</div>
+          </td>
+          <td>
+            <div class="text-muted">${task.description ? task.description.substring(0, 50) + (task.description.length > 50 ? '...' : '') : 'No description'}</div>
+          </td>
+          <td>
+            <span class="status-badge ${statusClass}">${statusDisplay}</span>
+          </td>
+          <td>
+            <span class="priority-badge ${priorityClass}">${priorityDisplay}</span>
+          </td>
+          <td>${dueDateDisplay}</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-value" style="width: ${task.progress || 0}%"></div>
+            </div>
+            <div class="text-muted small mt-1">${task.progress || 0}%</div>
+          </td>
+          <td>
+            <div class="task-actions">
+              <a href="/dashboard/tasks/${task.id}/" class="action-btn view-btn">
+                <i class="bi bi-eye"></i> View
+              </a>
+              <a href="/dashboard/tasks/${task.id}/update-progress/" class="action-btn update-btn">
+                <i class="bi bi-pencil"></i> Update
+              </a>
+            </div>
+          </td>
+        `;
+
+        taskTableBody.appendChild(row);
+      });
+    }
+
+    function showError(message) {
+      // Hide loading indicator
+      loadingElement.style.display = 'none';
+
+      // Show error message
+      emptyStateElement.style.display = 'block';
+      emptyStateElement.innerHTML = `
+        <div class="empty-icon text-danger"><i class="bi bi-exclamation-triangle"></i></div>
+        <h3>Error</h3>
+        <p>${message}</p>
+      `;
+    }
   </script>
 </body>
 </html>

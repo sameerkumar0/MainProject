@@ -111,6 +111,11 @@ DATABASES = {
         "PASSWORD": os.getenv("PASSWORD"),
         "HOST": os.getenv("HOST"),
         "PORT": str(os.getenv("PORT")),  # Explicitly convert PORT to string
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "use_unicode": True,
+            "init_command": "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'; SET character_set_connection=utf8mb4; SET collation_connection=utf8mb4_unicode_ci;",
+        }
     },
 
     'secondary': {
