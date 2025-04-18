@@ -31,8 +31,9 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
 
         print(f"Chat room creation request from user {user.id} ({user.username}) with role {user.role}")
         print(f"Request data: {data}")
+        print(f"Request data type: {type(data)}")
 
-        if user.role == UserRoles.MANAGER:
+        if user.is_manager():
             # Manager creating a chat with an employee
             employee_id = data.get('employee')
             print(f"Manager creating chat with employee ID: {employee_id}, type: {type(employee_id)}")
@@ -43,9 +44,12 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
                 raise ValidationError({'employee': 'Employee ID is required'})
 
             try:
-                # Convert to int if it's a string
-                if isinstance(employee_id, str) and employee_id.isdigit():
+                # Convert to int if it's a string or any other type
+                try:
                     employee_id = int(employee_id)
+                except (ValueError, TypeError):
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError({'employee': f'Invalid employee ID format: {employee_id}'})
 
                 print(f"Looking for employee with ID: {employee_id}")
                 employee = CustomUser.objects.get(id=employee_id, role=UserRoles.EMPLOYEE)
@@ -83,9 +87,12 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
                     manager = user.manager
                     print(f"Using employee's assigned manager: {manager.id} ({manager.username})")
                 elif manager_id:
-                    # Convert to int if it's a string
-                    if isinstance(manager_id, str) and manager_id.isdigit():
+                    # Convert to int if it's a string or any other type
+                    try:
                         manager_id = int(manager_id)
+                    except (ValueError, TypeError):
+                        from rest_framework.exceptions import ValidationError
+                        raise ValidationError({'manager': f'Invalid manager ID format: {manager_id}'})
 
                     print(f"Looking for manager with ID: {manager_id}")
                     manager = CustomUser.objects.get(id=manager_id, role=UserRoles.MANAGER)

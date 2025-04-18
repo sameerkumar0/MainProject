@@ -10,27 +10,27 @@
         margin: 0 auto;
         padding: 20px;
     }
-    
+
     .create-chat-header {
         display: flex;
         align-items: center;
         margin-bottom: 20px;
     }
-    
+
     .create-chat-back {
         margin-right: 15px;
         font-size: 1.5em;
         color: #666;
         text-decoration: none;
     }
-    
+
     .user-list {
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         overflow: hidden;
     }
-    
+
     .user-item {
         display: flex;
         padding: 15px;
@@ -38,15 +38,15 @@
         transition: background-color 0.2s;
         cursor: pointer;
     }
-    
+
     .user-item:hover {
         background-color: #f9f9f9;
     }
-    
+
     .user-item:last-child {
         border-bottom: none;
     }
-    
+
     .user-avatar {
         width: 50px;
         height: 50px;
@@ -60,34 +60,34 @@
         color: #666;
         overflow: hidden;
     }
-    
+
     .user-avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .user-info {
         flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
-    
+
     .user-name {
         font-weight: bold;
         margin-bottom: 5px;
     }
-    
+
     .user-role {
         color: #666;
         font-size: 0.9em;
     }
-    
+
     .search-container {
         margin-bottom: 20px;
     }
-    
+
     .search-input {
         width: 100%;
         padding: 12px 15px;
@@ -96,17 +96,17 @@
         outline: none;
         font-size: 1em;
     }
-    
+
     .search-input:focus {
         border-color: var(--primary-color);
     }
-    
+
     .empty-state {
         text-align: center;
         padding: 40px 20px;
         color: #666;
     }
-    
+
     .empty-state-icon {
         font-size: 3em;
         margin-bottom: 10px;
@@ -121,11 +121,11 @@
         <a href="{% url 'chat-list' %}" class="create-chat-back">←</a>
         <h1>New Message</h1>
     </div>
-    
+
     <div class="search-container">
         <input type="text" class="search-input" id="search-input" placeholder="Search for a user...">
     </div>
-    
+
     <div class="user-list" id="user-list">
         {% if available_users %}
             {% for user in available_users %}
@@ -156,20 +156,36 @@
 
 {% block extra_js %}
 <script>
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('search-input');
         const userList = document.getElementById('user-list');
         const userItems = userList.querySelectorAll('.user-item');
-        
+
         // Function to filter users
         function filterUsers() {
             const searchTerm = searchInput.value.toLowerCase();
             let hasResults = false;
-            
+
             userItems.forEach(item => {
                 const userName = item.querySelector('.user-name').textContent.toLowerCase();
                 const userRole = item.querySelector('.user-role').textContent.toLowerCase();
-                
+
                 if (userName.includes(searchTerm) || userRole.includes(searchTerm)) {
                     item.style.display = 'flex';
                     hasResults = true;
@@ -177,12 +193,12 @@
                     item.style.display = 'none';
                 }
             });
-            
+
             // Show empty state if no results
             if (!hasResults) {
                 // Check if empty state already exists
                 let emptyState = userList.querySelector('.empty-search-results');
-                
+
                 if (!emptyState) {
                     emptyState = document.createElement('div');
                     emptyState.className = 'empty-state empty-search-results';
@@ -193,7 +209,7 @@
                     `;
                     userList.appendChild(emptyState);
                 }
-                
+
                 emptyState.style.display = 'block';
             } else {
                 // Hide empty state if it exists
@@ -203,7 +219,7 @@
                 }
             }
         }
-        
+
         // Function to create or open a chat room
         async function createOrOpenChatRoom(userId) {
             try {
@@ -212,56 +228,82 @@
                     alert('Authentication token not found. Please log in again.');
                     return;
                 }
-                
+
                 const isManager = {{ is_manager|yesno:"true,false" }};
-                const data = isManager ? { employee: userId } : { manager: userId };
-                
+
+                // Make sure userId is treated as a number, not a string
+                const userIdNum = parseInt(userId, 10);
+                if (isNaN(userIdNum)) {
+                    throw new Error(`Invalid user ID: ${userId}`);
+                }
+
+                const data = isManager ? { employee: userIdNum } : { manager: userIdNum };
+
+                // Log the data being sent for debugging
+                console.log('Creating chat room with data:', data);
+                console.log('User role:', isManager ? 'Manager' : 'Employee');
+                console.log('Selected user ID (parsed):', userIdNum);
+                console.log('Selected user ID (original):', userId);
+
                 // First check if a chat room already exists
                 const response = await fetch('/chat/api/rooms/', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                
+
                 if (response.ok) {
                     const rooms = await response.json();
-                    const existingRoom = rooms.find(room => 
+                    const existingRoom = rooms.find(room =>
                         isManager ? room.employee == userId : room.manager == userId
                     );
-                    
+
                     if (existingRoom) {
                         // Room exists, redirect to it
                         window.location.href = `/chat/rooms/${existingRoom.id}/`;
                         return;
                     }
                 }
-                
+
                 // Create a new chat room
+                // Get CSRF token
+                const csrfToken = getCookie('csrftoken');
+
                 const createResponse = await fetch('/chat/api/rooms/', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data),
+                    credentials: 'same-origin' // Include cookies in the request
                 });
-                
+
                 if (!createResponse.ok) {
-                    throw new Error(`Failed to create chat room: ${createResponse.statusText}`);
+                    // Try to get more detailed error information
+                    try {
+                        const errorData = await createResponse.json();
+                        console.error('Server error details:', errorData);
+                        throw new Error(`Failed to create chat room: ${JSON.stringify(errorData)}`);
+                    } catch (jsonError) {
+                        // If we can't parse the JSON, use the status text
+                        throw new Error(`Failed to create chat room: ${createResponse.statusText}`);
+                    }
                 }
-                
+
                 const newRoom = await createResponse.json();
                 window.location.href = `/chat/rooms/${newRoom.id}/`;
-                
+
             } catch (error) {
                 console.error('Error creating chat room:', error);
                 alert(`Error: ${error.message || 'Could not create chat room'}`);
             }
         }
-        
+
         // Event listeners
         searchInput.addEventListener('input', filterUsers);
-        
+
         userItems.forEach(item => {
             item.addEventListener('click', function() {
                 const userId = this.dataset.userId;

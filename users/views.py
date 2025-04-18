@@ -12,9 +12,9 @@ from.models import CustomUser,UserRoles
 from tasks.permissions import IsManager,IsEmployee
 from rest_framework.permissions import AllowAny
 import random
-
-
-
+import string
+from django.utils import timezone
+from django.contrib.auth.hashers import make_password
 
 
 User = get_user_model()
@@ -183,7 +183,10 @@ class ForgotPasswordView(generics.GenericAPIView):
             # Check if the user is active
             if not user.is_active:
                 # For security reasons, don't explicitly state the account is inactive
-                return Response({'message': 'If your email is registered and active, you will receive password reset instructions.'}, status=status.HTTP_200_OK)
+                return Response({
+                    'message': 'If your email is registered and active, you will receive password reset instructions.',
+                    'redirect': False
+                }, status=status.HTTP_200_OK)
 
             # Generate a 6-digit OTP
             otp = ''.join(random.choices(string.digits, k=6))
@@ -193,17 +196,13 @@ class ForgotPasswordView(generics.GenericAPIView):
             user.otp_valid_until = timezone.now() + timezone.timedelta(minutes=15)  # OTP valid for 15 minutes
             user.save()
 
-            # Create reset password link with email parameter
-            reset_link = f"http://127.0.0.1:8001/auth/reset-password/?email={email}"
-
-            # Send email with OTP and reset link
+            # Send email with OTP only (no reset link)
             email_subject = "Password Reset Request"
             email_body = (
                 f"Hello {user.first_name},\n\n"
                 f"We received a request to reset your password. Your verification code is:\n\n"
                 f"OTP: {otp}\n\n"
-                f"Please use this code on the password reset page to verify your identity:\n"
-                f"{reset_link}\n\n"
+                f"Please use this code on the password reset page to verify your identity.\n\n"
                 f"This code will expire in 15 minutes.\n\n"
                 f"If you did not request a password reset, please ignore this email."
             )
@@ -212,12 +211,20 @@ class ForgotPasswordView(generics.GenericAPIView):
             # Log the password reset attempt for security auditing
             print(f"Password reset requested for {email} at {timezone.now()}")
 
-            return Response({'message': 'Password reset instructions sent to your email.'}, status=status.HTTP_200_OK)
+            # Return success with redirect flag and URL
+            return Response({
+                'message': 'Verification code sent to your email.',
+                'redirect': True,
+                'redirect_url': f"/auth/reset-password/?email={email}"
+            }, status=status.HTTP_200_OK)
         else:
             # For security reasons, don't reveal whether the email exists or not
             # But we can log this for internal monitoring
             print(f"Password reset attempted for non-existent email: {email} at {timezone.now()}")
-            return Response({'message': 'If your email is registered, you will receive password reset instructions.'}, status=status.HTTP_200_OK)
+            return Response({
+                'message': 'If your email is registered, you will receive password reset instructions.',
+                'redirect': False
+            }, status=status.HTTP_200_OK)
 
 def reset_password_page(request):
     email = request.GET.get('email')
@@ -353,7 +360,6 @@ class EmployeeProfileView(APIView):
         if serializer.is_valid():
             # Handle password update separately if provided
             if 'password' in request.data and request.data['password']:
-                from django.contrib.auth.hashers import make_password
                 user.password = make_password(request.data['password'])
 
             # Save the serializer (which will update other fields)

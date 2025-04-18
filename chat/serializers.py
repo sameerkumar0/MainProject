@@ -59,13 +59,32 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         if self.instance is None:  # Create mode
             # For managers, employee is required
             request = self.context.get('request')
-            if request and request.user.role == 'Manager':
-                if 'employee' not in data:
-                    raise serializers.ValidationError({'employee': 'Employee is required when a manager creates a chat room'})
-            # For employees, manager is required
-            elif request and request.user.role == 'Employee':
-                if 'manager' not in data:
-                    raise serializers.ValidationError({'manager': 'Manager is required when an employee creates a chat room'})
+
+            if request:
+                print(f"User role: {request.user.role}, User ID: {request.user.id}")
+
+                # Check if the user is a manager
+                if request.user.is_manager():
+                    print("User is a manager, checking for employee field")
+                    if 'employee' not in data:
+                        raise serializers.ValidationError({'employee': 'Employee is required when a manager creates a chat room'})
+                    else:
+                        print(f"Employee ID provided: {data['employee']}")
+
+                # Check if the user is an employee
+                elif request.user.is_employee():
+                    print("User is an employee, checking for manager field")
+                    if 'manager' not in data:
+                        raise serializers.ValidationError({'manager': 'Manager is required when an employee creates a chat room'})
+                    else:
+                        print(f"Manager ID provided: {data['manager']}")
+
+                else:
+                    print(f"Unknown user role: {request.user.role}")
+                    raise serializers.ValidationError({'role': f'Unknown user role: {request.user.role}'})
+            else:
+                print("No request object in context")
+                raise serializers.ValidationError({'request': 'No request object in context'})
 
         return data
 
