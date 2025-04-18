@@ -1,0 +1,84 @@
+{% extends "extended_base.html" %}
+
+{% block title %}Example Page{% endblock %}
+
+{% block page_css %}
+    <style>
+        .example-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .example-heading {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+        
+        .example-text {
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        .example-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .example-button:hover {
+            background-color: var(--primary-dark-color);
+            transform: translateY(-2px);
+        }
+    </style>
+{% endblock %}
+
+{% block page_content %}
+    <div class="example-container">
+        <h1 class="example-heading">Example Page Using Extended Base</h1>
+        
+        <p class="example-text">
+            This page demonstrates how to use the extended base template that includes both
+            the original base.html and our new static files, without affecting the existing
+            functionality of the application.
+        </p>
+        
+        <p class="example-text">
+            The extended base template allows us to:
+        </p>
+        
+        <ul class="example-text">
+            <li>Keep all existing functionality intact</li>
+            <li>Add new CSS and JavaScript files</li>
+            <li>Maintain the same URL structure</li>
+            <li>Gradually migrate to the new structure</li>
+        </ul>
+        
+        <a href="/" class="example-button">Back to Home</a>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Example page loaded successfully!');
+            
+            // Example of using a function from base.js
+            document.querySelector('.example-button').addEventListener('click', function(e) {
+                e.preventDefault();
+                showNotification('Going back to home page...', 'info');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+            });
+        });
+    </script>
+{% endblock %}

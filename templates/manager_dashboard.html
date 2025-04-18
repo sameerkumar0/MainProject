@@ -777,6 +777,46 @@
             color: var(--danger-color);
         }
 
+        /* Task priority styles */
+        .task-priority {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .task-priority.urgent {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .task-priority.high {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .task-priority.medium {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .task-priority.low {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        /* Unassigned task item styles */
+        .unassigned-task-item {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .unassigned-task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
         .employee-actions {
             display: flex;
             justify-content: space-between;
@@ -985,7 +1025,7 @@
                     </svg>
                     <div id="notification-badge" class="notification-badge" style="display: none;">0</div>
                 </div>
-                <a href="/auth/manager/employee-tasks/">Employee Tasks</a>
+                <a href="/dashboard/tasks/create/">Create Task</a>
                 <a href="/api/tasks/activities/view/">Activity Log</a>
                 <a href="/auth/logout/" class="logout-link">Logout</a>
             </nav>
@@ -1016,12 +1056,23 @@
                 <h1>Employee Task Management</h1>
             </div>
 
-            <!-- Dashboard Layout with Top Performers on the left -->
+            <!-- Dashboard Layout with Top Performers and Unassigned Tasks on the left -->
             <div class="dashboard-layout" style="display: flex; gap: 20px;">
-                <!-- Top Performers Section -->
-                <div class="top-performers-section" style="flex: 0 0 300px; background-color: white; border-radius: var(--border-radius); box-shadow: var(--box-shadow); padding: 20px; height: fit-content;">
-                    <h2 style="font-size: 1.3rem; margin-bottom: 15px; color: var(--dark-color);">Top Performers</h2>
-                    <div id="top-performers-list" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                <div style="flex: 0 0 300px;">
+                    <!-- Top Performers Section -->
+                    <div class="top-performers-section" style="background-color: white; border-radius: var(--border-radius); box-shadow: var(--box-shadow); padding: 20px; height: fit-content; margin-bottom: 20px;">
+                        <h2 style="font-size: 1.3rem; margin-bottom: 15px; color: var(--dark-color);">Top Performers</h2>
+                        <div id="top-performers-list" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                    </div>
+
+                    <!-- Unassigned Tasks Section -->
+                    <div class="unassigned-tasks-section" style="background-color: white; border-radius: var(--border-radius); box-shadow: var(--box-shadow); padding: 20px; height: fit-content;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h2 style="font-size: 1.3rem; color: var(--dark-color);">Unassigned Tasks</h2>
+                            <span id="unassigned-task-count" class="task-count-badge" style="background-color: var(--primary-color); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">0</span>
+                        </div>
+                        <div id="unassigned-tasks-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                    </div>
                 </div>
 
                 <!-- Main Content -->
@@ -1044,6 +1095,25 @@
                     </div>
 
                     <div id="employee-list" class="employee-list"></div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls" style="display: flex; justify-content: center; margin-top: 20px; gap: 10px;">
+                        <button id="prev-page" class="btn btn-outline" style="padding: 5px 15px;" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                            Previous
+                        </button>
+                        <div class="pagination-info" style="display: flex; align-items: center;">
+                            <span id="page-info">Page 1 of 1</span>
+                        </div>
+                        <button id="next-page" class="btn btn-outline" style="padding: 5px 15px;" disabled>
+                            Next
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1137,6 +1207,20 @@
             // Store all employees for filtering
             let allEmployees = [];
 
+            // Pagination variables
+            let currentPage = 1;
+            let employeesPerPage = 6; // Number of employees to show per page
+            let totalPages = 1;
+
+            // Pagination elements
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const pageInfoSpan = document.getElementById('page-info');
+
+            // Add pagination event listeners
+            prevPageBtn.addEventListener('click', goToPreviousPage);
+            nextPageBtn.addEventListener('click', goToNextPage);
+
             // Event listeners
 
             closeModalBtn.addEventListener('click', closeModal);
@@ -1225,6 +1309,9 @@
 
                     // Store unassigned tasks for later use
                     unassignedTasks = dashboardData.unassigned_tasks || [];
+
+                    // Render unassigned tasks
+                    renderUnassignedTasks(unassignedTasks);
 
                     // Render top performers if available
                     if (dashboardData.top_performers && dashboardData.top_performers.length > 0) {
@@ -1323,6 +1410,9 @@
                             <p>There are no employees in the system yet.</p>
                         </div>
                     `;
+
+                    // Hide pagination controls
+                    document.querySelector('.pagination-controls').style.display = 'none';
                     return;
                 }
 
@@ -1332,8 +1422,20 @@
                 // Populate tech stack filter
                 populateTechStackFilter(employees);
 
+                // Calculate total pages
+                totalPages = Math.ceil(employees.length / employeesPerPage);
+
+                // Update pagination info
+                updatePaginationControls();
+
+                // Get current page employees
+                const startIndex = (currentPage - 1) * employeesPerPage;
+                const endIndex = Math.min(startIndex + employeesPerPage, employees.length);
+                const currentPageEmployees = employees.slice(startIndex, endIndex);
+
+                // Render current page employees
                 employeeListElement.innerHTML = '';
-                employees.forEach(employee => {
+                currentPageEmployees.forEach(employee => {
                     const employeeCard = createEmployeeCard(employee);
                     employeeListElement.appendChild(employeeCard);
                 });
@@ -1424,6 +1526,12 @@
                             </svg>
                             Assign Task
                         </button>
+                        <button class="btn btn-info btn-sm chat-btn" data-id="${employee.id}" data-name="${employee.first_name} ${employee.last_name}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="action-icon">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Chat
+                        </button>
                     </div>
                 `;
 
@@ -1436,6 +1544,11 @@
                 const viewTasksBtn = div.querySelector('.view-tasks-btn');
                 viewTasksBtn.addEventListener('click', function() {
                     window.location.href = `/dashboard/tasks/?employee_id=${this.dataset.id}`;
+                });
+
+                const chatBtn = div.querySelector('.chat-btn');
+                chatBtn.addEventListener('click', function() {
+                    openOrCreateChat(this.dataset.id, this.dataset.name);
                 });
 
                 return div;
@@ -1454,6 +1567,208 @@
 
                     // Show modal
                     assignTaskModal.style.display = 'block';
+                });
+            }
+
+            function renderUnassignedTasks(tasks) {
+                const unassignedTasksList = document.getElementById('unassigned-tasks-list');
+                const unassignedTaskCount = document.getElementById('unassigned-task-count');
+
+                // Update the count
+                unassignedTaskCount.textContent = tasks.length;
+
+                // Clear the list
+                unassignedTasksList.innerHTML = '';
+
+                if (tasks.length === 0) {
+                    unassignedTasksList.innerHTML = `
+                        <div class="empty-state" style="text-align: center; padding: 15px 0;">
+                            <div style="font-size: 1.5rem; margin-bottom: 5px;">📋</div>
+                            <p style="color: var(--gray-color);">No unassigned tasks</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort tasks by priority (high to low) and then by creation date (newest first)
+                const priorityOrder = { 'urgent': 0, 'high': 1, 'medium': 2, 'low': 3 };
+                const sortedTasks = [...tasks].sort((a, b) => {
+                    // First sort by priority
+                    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                    if (priorityDiff !== 0) return priorityDiff;
+
+                    // Then by creation date (newest first)
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                // Limit to 5 tasks to avoid cluttering the UI
+                const tasksToShow = sortedTasks.slice(0, 5);
+
+                // Create task items
+                tasksToShow.forEach(task => {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = 'unassigned-task-item';
+                    taskItem.style.padding = '10px';
+                    taskItem.style.borderRadius = 'var(--border-radius)';
+                    taskItem.style.backgroundColor = '#f8f9fa';
+                    taskItem.style.borderLeft = `4px solid ${getPriorityColor(task.priority)}`;
+
+                    // Format due date if exists
+                    const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+
+                    // Truncate description
+                    const description = task.description ?
+                        (task.description.length > 50 ? task.description.substring(0, 50) + '...' : task.description) :
+                        'No description';
+
+                    taskItem.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 5px;">${task.title}</div>
+                        <div style="font-size: 0.8rem; color: var(--gray-color); margin-bottom: 5px;">${description}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="task-priority ${task.priority}" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 10px;">
+                                ${capitalizeFirstLetter(task.priority)}
+                            </span>
+                            <span style="font-size: 0.75rem; color: var(--gray-color);">${dueDate}</span>
+                        </div>
+                    `;
+
+                    // Add click event to open the task assignment modal
+                    taskItem.addEventListener('click', function() {
+                        // Show a dropdown of employees to assign this task to
+                        showAssignTaskDropdown(task.id);
+                    });
+
+                    unassignedTasksList.appendChild(taskItem);
+                });
+
+                // Add a "View All" link if there are more than 5 tasks
+                if (tasks.length > 5) {
+                    const viewAllLink = document.createElement('a');
+                    viewAllLink.href = '/dashboard/tasks/assign/';
+                    viewAllLink.className = 'view-all-link';
+                    viewAllLink.style.textAlign = 'center';
+                    viewAllLink.style.display = 'block';
+                    viewAllLink.style.marginTop = '10px';
+                    viewAllLink.style.color = 'var(--primary-color)';
+                    viewAllLink.style.fontWeight = '500';
+                    viewAllLink.style.fontSize = '0.9rem';
+                    viewAllLink.textContent = `View all ${tasks.length} unassigned tasks`;
+                    unassignedTasksList.appendChild(viewAllLink);
+                }
+            }
+
+            function getPriorityColor(priority) {
+                switch(priority) {
+                    case 'urgent': return '#ef4444';
+                    case 'high': return '#f59e0b';
+                    case 'medium': return '#3b82f6';
+                    case 'low': return '#10b981';
+                    default: return '#6b7280';
+                }
+            }
+
+            function showAssignTaskDropdown(taskId) {
+                // Find the task
+                const task = unassignedTasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                // Create a simple modal to select an employee
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'block';
+
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                modalContent.style.maxWidth = '500px';
+
+                modalContent.innerHTML = `
+                    <span class="close-modal">&times;</span>
+                    <div class="modal-header">
+                        <h2 class="modal-title">Assign Task: ${task.title}</h2>
+                    </div>
+                    <form id="quick-assign-form">
+                        <input type="hidden" id="quick-task-id" value="${task.id}">
+
+                        <div class="form-group">
+                            <label for="quick-employee-select">Select Employee:</label>
+                            <select id="quick-employee-select" class="form-control" required>
+                                <option value="">-- Select an employee --</option>
+                                ${allEmployees.map(emp => `<option value="${emp.id}">${emp.first_name} ${emp.last_name}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quick-due-date">Due Date:</label>
+                            <input type="date" id="quick-due-date" class="form-control">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="quick-cancel-btn" class="btn btn-outline">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Assign Task</button>
+                        </div>
+                    </form>
+                `;
+
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+
+                // Add event listeners
+                const closeBtn = modal.querySelector('.close-modal');
+                const cancelBtn = modal.querySelector('#quick-cancel-btn');
+                const form = modal.querySelector('#quick-assign-form');
+
+                closeBtn.addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+
+                cancelBtn.addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const taskId = document.getElementById('quick-task-id').value;
+                    const employeeId = document.getElementById('quick-employee-select').value;
+                    const dueDate = document.getElementById('quick-due-date').value;
+
+                    if (!employeeId) {
+                        alert('Please select an employee');
+                        return;
+                    }
+
+                    try {
+                        const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                        if (!token) throw new Error('Authentication token not found');
+
+                        const response = await fetch('/api/tasks/assign/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                task_id: taskId,
+                                employee_id: employeeId,
+                                due_date: dueDate || null
+                            })
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Failed to assign task');
+
+                        // Remove the modal
+                        document.body.removeChild(modal);
+
+                        // Show success message
+                        alert('Task assigned successfully!');
+
+                        // Refresh dashboard data
+                        fetchDashboardData();
+                        fetchNotifications();
+                    } catch (error) {
+                        alert(`Error: ${error.message}`);
+                    }
                 });
             }
 
@@ -1479,6 +1794,9 @@
                         // Fallback for backward compatibility
                         unassignedTasks = data;
                     }
+
+                    // Update the unassigned tasks section
+                    renderUnassignedTasks(unassignedTasks);
                 } catch (error) {
                     // If there's an error, we'll use the tasks we already have
                 }
@@ -1723,12 +2041,178 @@
                 return name.split(' ').map(n => n[0]).join('').toUpperCase();
             }
 
+            function capitalizeFirstLetter(string) {
+                if (!string) return '';
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+
+            // Function to open or create a chat with an employee
+            async function openOrCreateChat(employeeId, employeeName) {
+                try {
+                    console.log(`Opening chat with employee ID: ${employeeId}, Name: ${employeeName}`);
+
+                    // Get the CSRF token from the cookie
+                    function getCookie(name) {
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                    break;
+                                }
+                            }
+                        }
+                        return cookieValue;
+                    }
+
+                    const csrftoken = getCookie('csrftoken');
+
+                    // Try to get the token from localStorage
+                    let token = localStorage.getItem('access_token') || localStorage.getItem('access');
+
+                    // Prepare headers
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    };
+
+                    // Add Authorization header if token exists
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+
+                    console.log('Fetching existing chat rooms...');
+
+                    // First check if a chat room already exists with this employee
+                    const response = await fetch('/chat/api/rooms/', {
+                        headers: headers,
+                        credentials: 'include' // Include cookies
+                    });
+
+                    if (response.status === 401) {
+                        console.log('Authentication failed. Redirecting to login page.');
+                        window.location.href = '/auth/login/manager/';
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch chat rooms: ${response.statusText}`);
+                    }
+
+                    const rooms = await response.json();
+                    console.log('Received rooms:', rooms);
+
+                    // Make sure we're comparing the correct employee ID
+                    console.log('Looking for employee ID:', employeeId);
+                    console.log('Available rooms:', rooms.map(r => ({ id: r.id, employee: r.employee })));
+
+                    // Find a room where this specific employee is a participant
+                    const existingRoom = rooms.find(room => {
+                        // Convert both to strings and then compare to avoid type issues
+                        return String(room.employee) === String(employeeId);
+                    });
+
+                    if (existingRoom) {
+                        console.log(`Found existing room with ID: ${existingRoom.id}`);
+                        // Room exists, redirect to it
+                        window.location.href = `/chat/rooms/${existingRoom.id}/`;
+                        return;
+                    }
+
+                    console.log('No existing room found. Creating new chat room...');
+
+                    // Create a new chat room
+                    console.log('Creating chat room with employee ID:', employeeId);
+
+                    // Ensure employeeId is a valid value
+                    if (!employeeId) {
+                        throw new Error('Employee ID is missing or invalid');
+                    }
+
+                    // Create the request payload
+                    const payload = {
+                        employee: employeeId
+                    };
+                    console.log('Request payload:', payload);
+
+                    const createResponse = await fetch('/chat/api/rooms/', {
+                        method: 'POST',
+                        headers: headers,
+                        credentials: 'include', // Include cookies
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (createResponse.status === 401) {
+                        console.log('Authentication failed during room creation. Redirecting to login page.');
+                        window.location.href = '/auth/login/manager/';
+                        return;
+                    }
+
+                    if (!createResponse.ok) {
+                        // Get the full error response
+                        const errorText = await createResponse.text();
+                        console.error('Error response:', errorText);
+
+                        // Try to parse as JSON if possible
+                        let errorData = {};
+                        try {
+                            errorData = JSON.parse(errorText);
+                            console.error('Parsed error data:', errorData);
+                        } catch (e) {
+                            console.error('Could not parse error response as JSON');
+                        }
+
+                        throw new Error(`Failed to create chat room: ${errorData.detail || errorData.employee || createResponse.statusText}`);
+                    }
+
+                    const newRoom = await createResponse.json();
+                    console.log(`Created new room with ID: ${newRoom.id}`);
+                    window.location.href = `/chat/rooms/${newRoom.id}/`;
+
+                } catch (error) {
+                    console.error('Error opening/creating chat:', error);
+                    alert(`Error: ${error.message || 'Could not open chat'}`);
+                }
+            }
+
             function formatStatus(status) {
                 if (!status) return 'Unknown';
                 return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             }
 
-            function filterEmployees() {
+            // Pagination functions
+            function updatePaginationControls() {
+                // Update page info text
+                pageInfoSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+
+                // Enable/disable previous button
+                prevPageBtn.disabled = currentPage <= 1;
+
+                // Enable/disable next button
+                nextPageBtn.disabled = currentPage >= totalPages;
+
+                // Show/hide pagination controls
+                document.querySelector('.pagination-controls').style.display =
+                    totalPages > 1 ? 'flex' : 'none';
+            }
+
+            function goToPreviousPage() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    filterEmployees(false); // Don't reset page when navigating
+                }
+            }
+
+            function goToNextPage() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    filterEmployees(false); // Don't reset page when navigating
+                }
+            }
+
+            function filterEmployees(resetPage = true) {
                 const searchTerm = employeeSearchInput.value.toLowerCase();
                 const techFilter = techFilterSelect.value.toLowerCase();
                 const statusFilter = taskStatusFilterSelect.value;
@@ -1759,7 +2243,18 @@
                     return (nameMatch || emailMatch) && techStackMatch && statusMatch;
                 });
 
-                // Render filtered employees
+                // Reset to first page when filtering (if resetPage is true)
+                if (resetPage) {
+                    currentPage = 1;
+                }
+
+                // Calculate total pages based on filtered results
+                totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
+
+                // Update pagination controls
+                updatePaginationControls();
+
+                // Render filtered employees with pagination
                 employeeListElement.innerHTML = '';
 
                 if (filteredEmployees.length === 0) {
@@ -1770,10 +2265,19 @@
                             <p>Try adjusting your search or filters.</p>
                         </div>
                     `;
+
+                    // Hide pagination controls when no results
+                    document.querySelector('.pagination-controls').style.display = 'none';
                     return;
                 }
 
-                filteredEmployees.forEach(employee => {
+                // Get current page employees
+                const startIndex = (currentPage - 1) * employeesPerPage;
+                const endIndex = Math.min(startIndex + employeesPerPage, filteredEmployees.length);
+                const currentPageEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+                // Render current page employees
+                currentPageEmployees.forEach(employee => {
                     const employeeCard = createEmployeeCard(employee);
                     employeeListElement.appendChild(employeeCard);
                 });

@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chat Rooms{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .chat-rooms {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .chat-room-item {
+        display: flex;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .chat-room-item:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .chat-room-item:last-child {
+        border-bottom: none;
+    }
+    
+    .chat-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 15px;
+        background-color: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #666;
+        overflow: hidden;
+    }
+    
+    .chat-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .chat-info {
+        flex: 1;
+    }
+    
+    .chat-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .chat-preview {
+        color: #666;
+        font-size: 0.9em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .chat-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        min-width: 70px;
+    }
+    
+    .chat-time {
+        font-size: 0.8em;
+        color: #999;
+    }
+    
+    .unread-badge {
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-size: 0.8em;
+        margin-top: 5px;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+    
+    .empty-state-icon {
+        font-size: 3em;
+        margin-bottom: 10px;
+        color: #ccc;
+    }
+    
+    .btn-create-chat {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-create-chat:hover {
+        background-color: var(--primary-dark-color, #0056b3);
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h1>Messages</h1>
+        <a href="{% url 'create-chat' %}" class="btn-create-chat">New Message</a>
+    </div>
+    
+    <div class="chat-rooms" id="chat-rooms">
+        <div class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading chat rooms...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatRoomsContainer = document.getElementById('chat-rooms');
+        
+        // Function to fetch chat rooms
+        async function fetchChatRooms() {
+            try {
+                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                if (!token) {
+                    showError('Authentication token not found. Please log in again.');
+                    return;
+                }
+                
+                const response = await fetch('/chat/api/rooms/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showError('Your session has expired. Please login again.');
+                    setTimeout(() => {
+                        window.location.href = '/auth/login/';
+                    }, 2000);
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch chat rooms: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                renderChatRooms(data);
+                
+            } catch (error) {
+                console.error('Error fetching chat rooms:', error);
+                chatRoomsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Error loading chat rooms</h3>
+                        <p>${error.message || 'Please try again later.'}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Function to render chat rooms
+        function renderChatRooms(rooms) {
+            if (!rooms || rooms.length === 0) {
+                chatRoomsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <h3>No messages yet</h3>
+                        <p>Start a conversation by clicking "New Message"</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const isManager = {{ is_manager|yesno:"true,false" }};
+            
+            chatRoomsContainer.innerHTML = '';
+            
+            rooms.forEach(room => {
+                // Determine which user to show (the other participant)
+                const otherUser = isManager ? 
+                    { id: room.employee, name: room.employee_name, photo: room.employee_photo } : 
+                    { id: room.manager, name: room.manager_name, photo: room.manager_photo };
+                
+                const lastMessage = room.last_message || { content: 'No messages yet', timestamp: '' };
+                
+                const roomElement = document.createElement('a');
+                roomElement.href = `/chat/rooms/${room.id}/`;
+                roomElement.className = 'chat-room-item';
+                
+                // Create avatar
+                const avatarElement = document.createElement('div');
+                avatarElement.className = 'chat-avatar';
+                
+                if (otherUser.photo) {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = otherUser.photo;
+                    imgElement.alt = otherUser.name;
+                    avatarElement.appendChild(imgElement);
+                } else {
+                    avatarElement.textContent = otherUser.name.charAt(0);
+                }
+                
+                // Create info section
+                const infoElement = document.createElement('div');
+                infoElement.className = 'chat-info';
+                
+                const nameElement = document.createElement('div');
+                nameElement.className = 'chat-name';
+                nameElement.textContent = otherUser.name;
+                
+                const previewElement = document.createElement('div');
+                previewElement.className = 'chat-preview';
+                previewElement.textContent = lastMessage.content;
+                
+                infoElement.appendChild(nameElement);
+                infoElement.appendChild(previewElement);
+                
+                // Create meta section
+                const metaElement = document.createElement('div');
+                metaElement.className = 'chat-meta';
+                
+                const timeElement = document.createElement('div');
+                timeElement.className = 'chat-time';
+                timeElement.textContent = lastMessage.timestamp;
+                
+                metaElement.appendChild(timeElement);
+                
+                // Add unread badge if there are unread messages
+                if (room.unread_count > 0) {
+                    const unreadElement = document.createElement('div');
+                    unreadElement.className = 'unread-badge';
+                    unreadElement.textContent = room.unread_count;
+                    metaElement.appendChild(unreadElement);
+                }
+                
+                // Assemble the room item
+                roomElement.appendChild(avatarElement);
+                roomElement.appendChild(infoElement);
+                roomElement.appendChild(metaElement);
+                
+                chatRoomsContainer.appendChild(roomElement);
+            });
+        }
+        
+        // Function to show error
+        function showError(message) {
+            chatRoomsContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        // Initial fetch
+        fetchChatRooms();
+        
+        // Refresh every 30 seconds
+        setInterval(fetchChatRooms, 30000);
+    });
+</script>
+{% endblock %}

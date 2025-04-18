@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New Message{% endblock %}
+
+{% block extra_css %}
+<style>
+    .create-chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .create-chat-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .create-chat-back {
+        margin-right: 15px;
+        font-size: 1.5em;
+        color: #666;
+        text-decoration: none;
+    }
+    
+    .user-list {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .user-item {
+        display: flex;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+    
+    .user-item:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .user-item:last-child {
+        border-bottom: none;
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 15px;
+        background-color: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #666;
+        overflow: hidden;
+    }
+    
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .user-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .user-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .user-role {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .search-container {
+        margin-bottom: 20px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        outline: none;
+        font-size: 1em;
+    }
+    
+    .search-input:focus {
+        border-color: var(--primary-color);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+    
+    .empty-state-icon {
+        font-size: 3em;
+        margin-bottom: 10px;
+        color: #ccc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-chat-container">
+    <div class="create-chat-header">
+        <a href="{% url 'chat-list' %}" class="create-chat-back">←</a>
+        <h1>New Message</h1>
+    </div>
+    
+    <div class="search-container">
+        <input type="text" class="search-input" id="search-input" placeholder="Search for a user...">
+    </div>
+    
+    <div class="user-list" id="user-list">
+        {% if available_users %}
+            {% for user in available_users %}
+                <div class="user-item" data-user-id="{{ user.id }}">
+                    <div class="user-avatar">
+                        {% if user.profile_photo %}
+                            <img src="{{ user.profile_photo.url }}" alt="{{ user.first_name }}">
+                        {% else %}
+                            {{ user.first_name|first }}
+                        {% endif %}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+                        <div class="user-role">{{ user.role }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <h3>No users found</h3>
+                <p>There are no users available to chat with.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const userList = document.getElementById('user-list');
+        const userItems = userList.querySelectorAll('.user-item');
+        
+        // Function to filter users
+        function filterUsers() {
+            const searchTerm = searchInput.value.toLowerCase();
+            let hasResults = false;
+            
+            userItems.forEach(item => {
+                const userName = item.querySelector('.user-name').textContent.toLowerCase();
+                const userRole = item.querySelector('.user-role').textContent.toLowerCase();
+                
+                if (userName.includes(searchTerm) || userRole.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                    hasResults = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Show empty state if no results
+            if (!hasResults) {
+                // Check if empty state already exists
+                let emptyState = userList.querySelector('.empty-search-results');
+                
+                if (!emptyState) {
+                    emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state empty-search-results';
+                    emptyState.innerHTML = `
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>No users found</h3>
+                        <p>Try a different search term.</p>
+                    `;
+                    userList.appendChild(emptyState);
+                }
+                
+                emptyState.style.display = 'block';
+            } else {
+                // Hide empty state if it exists
+                const emptyState = userList.querySelector('.empty-search-results');
+                if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
+            }
+        }
+        
+        // Function to create or open a chat room
+        async function createOrOpenChatRoom(userId) {
+            try {
+                const token = localStorage.getItem('access_token') || localStorage.getItem('access');
+                if (!token) {
+                    alert('Authentication token not found. Please log in again.');
+                    return;
+                }
+                
+                const isManager = {{ is_manager|yesno:"true,false" }};
+                const data = isManager ? { employee: userId } : { manager: userId };
+                
+                // First check if a chat room already exists
+                const response = await fetch('/chat/api/rooms/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const rooms = await response.json();
+                    const existingRoom = rooms.find(room => 
+                        isManager ? room.employee == userId : room.manager == userId
+                    );
+                    
+                    if (existingRoom) {
+                        // Room exists, redirect to it
+                        window.location.href = `/chat/rooms/${existingRoom.id}/`;
+                        return;
+                    }
+                }
+                
+                // Create a new chat room
+                const createResponse = await fetch('/chat/api/rooms/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!createResponse.ok) {
+                    throw new Error(`Failed to create chat room: ${createResponse.statusText}`);
+                }
+                
+                const newRoom = await createResponse.json();
+                window.location.href = `/chat/rooms/${newRoom.id}/`;
+                
+            } catch (error) {
+                console.error('Error creating chat room:', error);
+                alert(`Error: ${error.message || 'Could not create chat room'}`);
+            }
+        }
+        
+        // Event listeners
+        searchInput.addEventListener('input', filterUsers);
+        
+        userItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const userId = this.dataset.userId;
+                createOrOpenChatRoom(userId);
+            });
+        });
+    });
+</script>
+{% endblock %}

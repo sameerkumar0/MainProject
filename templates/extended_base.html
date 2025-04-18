@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <!-- Include our new base CSS without affecting the original -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    
+    <!-- Page-specific CSS -->
+    {% block page_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+    <!-- Content from child templates will go here -->
+    {% block page_content %}{% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Include our new base JS without affecting the original -->
+    <script src="/static/js/base.js"></script>
+    
+    <!-- Page-specific JavaScript -->
+    {% block page_js %}{% endblock %}
+{% endblock %}

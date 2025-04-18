@@ -54,12 +54,46 @@
       background-color: white;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card.active-filter {
+      border: 2px solid;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .total-tasks.active-filter {
+      border-color: var(--primary-color);
+    }
+
+    .completed-tasks.active-filter {
+      border-color: var(--success-color);
+    }
+
+    .in-progress-tasks.active-filter {
+      border-color: var(--warning-color);
+    }
+
+    .pending-tasks.active-filter {
+      border-color: var(--danger-color);
     }
 
     .stat-value {
       font-size: 1.5rem;
       font-weight: bold;
       margin-bottom: 0.25rem;
+    }
+
+    .filtered-count {
+      font-size: 0.9rem;
+      opacity: 0.7;
+      font-weight: normal;
     }
 
     .stat-label {
@@ -267,19 +301,19 @@
 
     <!-- Task Statistics -->
     <div class="task-stats" id="task-stats">
-      <div class="stat-card total-tasks">
+      <div class="stat-card total-tasks" id="total-tasks-card" style="cursor: pointer;">
         <div class="stat-value" id="total-count">0</div>
         <div class="stat-label">Total Tasks</div>
       </div>
-      <div class="stat-card completed-tasks">
+      <div class="stat-card completed-tasks" id="completed-tasks-card" style="cursor: pointer;">
         <div class="stat-value" id="completed-count">0</div>
         <div class="stat-label">Completed</div>
       </div>
-      <div class="stat-card in-progress-tasks">
+      <div class="stat-card in-progress-tasks" id="in-progress-tasks-card" style="cursor: pointer;">
         <div class="stat-value" id="in-progress-count">0</div>
         <div class="stat-label">In Progress</div>
       </div>
-      <div class="stat-card pending-tasks">
+      <div class="stat-card pending-tasks" id="pending-tasks-card" style="cursor: pointer;">
         <div class="stat-value" id="pending-count">0</div>
         <div class="stat-label">Pending</div>
       </div>
@@ -407,6 +441,30 @@
         filterForm.reset();
         fetchTasks();
       });
+
+      // Task statistics card click events
+      document.getElementById('total-tasks-card').addEventListener('click', () => {
+        filterForm.reset();
+        fetchTasks();
+      });
+
+      document.getElementById('completed-tasks-card').addEventListener('click', () => {
+        filterForm.reset();
+        document.querySelector('select[name="status"]').value = 'completed';
+        fetchTasks('?status=completed');
+      });
+
+      document.getElementById('in-progress-tasks-card').addEventListener('click', () => {
+        filterForm.reset();
+        document.querySelector('select[name="status"]').value = 'in_progress';
+        fetchTasks('?status=in_progress');
+      });
+
+      document.getElementById('pending-tasks-card').addEventListener('click', () => {
+        filterForm.reset();
+        document.querySelector('select[name="status"]').value = 'pending';
+        fetchTasks('?status=pending');
+      });
     });
 
     async function fetchTasks(query = '') {
@@ -422,6 +480,25 @@
           return;
         }
 
+        // First, fetch all tasks to get total counts for statistics
+        let allTasksData = null;
+        if (query) {
+          try {
+            const allTasksRes = await fetch(apiEndpoint, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (allTasksRes.ok) {
+              allTasksData = await allTasksRes.json();
+            }
+          } catch (e) {
+            console.warn('Could not fetch all tasks for statistics:', e);
+          }
+        }
+
+        // Fetch filtered tasks
         const res = await fetch(`${apiEndpoint}${query}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -446,7 +523,18 @@
         const tasks = Array.isArray(data) ? data : (data.results || []);
 
         // Update task statistics
-        updateTaskStats(data.task_stats || calculateTaskStats(tasks));
+        if (query && allTasksData) {
+          // If we're filtering, show both total stats and filtered stats
+          const allTasks = Array.isArray(allTasksData) ? allTasksData : (allTasksData.results || []);
+          const allStats = allTasksData.task_stats || calculateTaskStats(allTasks);
+          const filteredStats = calculateTaskStats(tasks);
+
+          // Update the UI with total counts but show how many match the filter
+          updateTaskStats(allStats, filteredStats);
+        } else {
+          // No filtering, just show regular stats
+          updateTaskStats(data.task_stats || calculateTaskStats(tasks));
+        }
 
         // Render tasks
         renderTasks(tasks);
@@ -473,7 +561,7 @@
           stats.completed++;
         } else if (task.status === 'in_progress') {
           stats.in_progress++;
-        } else {
+        } else if (task.status === 'pending' || task.status === 'assigned') {
           stats.pending++;
         }
       });
@@ -481,11 +569,47 @@
       return stats;
     }
 
-    function updateTaskStats(stats) {
+    function updateTaskStats(stats, filteredStats = null) {
+      // Update the main stats
       totalCountElement.textContent = stats.total || 0;
       completedCountElement.textContent = stats.completed || 0;
       inProgressCountElement.textContent = stats.in_progress || 0;
       pendingCountElement.textContent = stats.pending || 0;
+
+      // If we have filtered stats, add a visual indicator to show how many match the filter
+      if (filteredStats) {
+        // Add filtered count to the cards
+        if (filteredStats.total < stats.total) {
+          document.getElementById('total-tasks-card').classList.add('active-filter');
+          totalCountElement.innerHTML = `${filteredStats.total}<span class="filtered-count">/${stats.total}</span>`;
+        }
+
+        if (filteredStats.completed < stats.completed) {
+          document.getElementById('completed-tasks-card').classList.add('active-filter');
+          completedCountElement.innerHTML = `${filteredStats.completed}<span class="filtered-count">/${stats.completed}</span>`;
+        } else if (filteredStats.completed > 0) {
+          document.getElementById('completed-tasks-card').classList.add('active-filter');
+        }
+
+        if (filteredStats.in_progress < stats.in_progress) {
+          document.getElementById('in-progress-tasks-card').classList.add('active-filter');
+          inProgressCountElement.innerHTML = `${filteredStats.in_progress}<span class="filtered-count">/${stats.in_progress}</span>`;
+        } else if (filteredStats.in_progress > 0) {
+          document.getElementById('in-progress-tasks-card').classList.add('active-filter');
+        }
+
+        if (filteredStats.pending < stats.pending) {
+          document.getElementById('pending-tasks-card').classList.add('active-filter');
+          pendingCountElement.innerHTML = `${filteredStats.pending}<span class="filtered-count">/${stats.pending}</span>`;
+        } else if (filteredStats.pending > 0) {
+          document.getElementById('pending-tasks-card').classList.add('active-filter');
+        }
+      } else {
+        // Remove any active filter indicators
+        document.querySelectorAll('.stat-card').forEach(card => {
+          card.classList.remove('active-filter');
+        });
+      }
     }
 
     function renderTasks(tasks) {

@@ -46,8 +46,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",  # Add this for token blacklisting
+    "channels",  # Django Channels for WebSockets
     "users",
     "tasks",
+    "chat",  # Chat application
 ]
 
 MIDDLEWARE = [
@@ -98,6 +100,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'MainProject.wsgi.application'
+ASGI_APPLICATION = 'MainProject.asgi.application'
+
+# Channel layers for WebSockets
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Database

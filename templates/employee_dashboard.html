@@ -810,6 +810,44 @@
             background-color: rgba(22, 101, 52, 0.15);
         }
 
+        .task-completed-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #047857;
+            background-color: rgba(4, 120, 87, 0.1);
+            border: 1px solid rgba(4, 120, 87, 0.2);
+            border-radius: 0.375rem;
+            transition: all 0.2s ease;
+        }
+
+        .task-completed-badge::before {
+            content: '';
+            display: inline-block;
+            width: 0.75rem;
+            height: 0.75rem;
+            margin-right: 0.375rem;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23047857' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .document-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .document-icon:hover {
+            transform: scale(1.2);
+        }
+
         .loading {
             display: flex;
             flex-direction: column;
@@ -969,6 +1007,19 @@
             background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0) 100%);
         }
 
+        .deadline-item.completed {
+            border-left-color: #047857;
+            background-color: #ecfdf5;
+        }
+
+        .deadline-item.completed::after {
+            background: linear-gradient(90deg, rgba(4, 120, 87, 0.05) 0%, rgba(4, 120, 87, 0) 100%);
+        }
+
+        .deadline-item.completed .deadline-task::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23047857' viewBox='0 0 24 24'%3E%3Cpath d='M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z'/%3E%3C/svg%3E");
+        }
+
         .deadline-task {
             font-weight: 600;
             color: #1f2937;
@@ -1028,6 +1079,13 @@
         .deadline-date-soon {
             color: #92400e;
             font-weight: 600;
+        }
+
+        .deadline-date-completed {
+            color: #047857;
+            font-weight: 600;
+            background-color: rgba(4, 120, 87, 0.1);
+            border: 1px solid rgba(4, 120, 87, 0.2);
         }
 
         /* Responsive design */
@@ -1532,6 +1590,9 @@
                     </div>
                     <span class="user-name-nav">{{ employee.first_name }} {{ employee.last_name }}</span>
                 </a>
+                <a href="/dashboard/employee_dashboard/">Dashboard</a>
+                <a href="/dashboard/tasks/">Tasks</a>
+                <a href="/chat/">Messages</a>
                 <div class="relative inline-block">
                     <button id="notification-bell" class="notification-bell">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1560,6 +1621,12 @@
                 Welcome, {{ employee.first_name }}!
                 <span>Here's an overview of your tasks and upcoming deadlines</span>
             </div>
+            <button id="chat-with-manager" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; background-color: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; transition: all 0.3s ease;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Chat with Manager
+            </button>
         </div>
 
         <div class="dashboard-content">
@@ -1667,6 +1734,12 @@
             fetchTasks();
             fetchNotifications();
             fetchDeadlines();
+
+            // Chat with manager button
+            const chatWithManagerBtn = document.getElementById('chat-with-manager');
+            if (chatWithManagerBtn) {
+                chatWithManagerBtn.addEventListener('click', openOrCreateManagerChat);
+            }
 
             // Event listeners for notifications
             if (notificationBell) {
@@ -1888,6 +1961,119 @@
                 return Math.floor(seconds) + " second" + (seconds === 1 ? "" : "s") + " ago";
             }
 
+            // Function to open or create a chat with the manager
+            async function openOrCreateManagerChat() {
+                try {
+                    console.log('Opening chat with manager');
+
+                    // Get the CSRF token from the cookie
+                    function getCookie(name) {
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                    break;
+                                }
+                            }
+                        }
+                        return cookieValue;
+                    }
+
+                    const csrftoken = getCookie('csrftoken');
+
+                    // Try to get the token from localStorage
+                    let token = localStorage.getItem('access_token') || localStorage.getItem('access');
+
+                    // Prepare headers
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    };
+
+                    // Add Authorization header if token exists
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+
+                    console.log('Fetching existing chat rooms...');
+
+                    // First check if a chat room already exists with the manager
+                    const response = await fetch('/chat/api/rooms/', {
+                        headers: headers,
+                        credentials: 'include' // Include cookies
+                    });
+
+                    if (response.status === 401) {
+                        console.log('Authentication failed. Redirecting to login page.');
+                        window.location.href = '/auth/login/employee/';
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch chat rooms: ${response.statusText}`);
+                    }
+
+                    const rooms = await response.json();
+                    console.log('Received rooms:', rooms);
+
+                    // Find a room where the employee is the current user
+                    console.log('Current employee ID:', {{ employee.id }});
+                    console.log('Available rooms:', rooms.map(r => ({ id: r.id, employee: r.employee })));
+
+                    // Find a room where this employee is a participant
+                    const existingRoom = rooms.find(room => {
+                        // Convert both to strings and then compare to avoid type issues
+                        return String(room.employee) === String({{ employee.id }});
+                    });
+
+                    if (existingRoom) {
+                        console.log(`Found existing room with ID: ${existingRoom.id}`);
+                        // Room exists, redirect to it
+                        window.location.href = `/chat/rooms/${existingRoom.id}/`;
+                        return;
+                    }
+
+                    console.log('No existing room found. Creating new chat room...');
+
+                    // Create a new chat room with the manager
+                    console.log('Creating chat room with manager');
+
+                    // Create the request payload - empty object as the API will use the current employee
+                    // and find their manager automatically
+                    const payload = {};
+                    console.log('Request payload:', payload);
+
+                    const createResponse = await fetch('/chat/api/rooms/', {
+                        method: 'POST',
+                        headers: headers,
+                        credentials: 'include', // Include cookies
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (createResponse.status === 401) {
+                        console.log('Authentication failed during room creation. Redirecting to login page.');
+                        window.location.href = '/auth/login/employee/';
+                        return;
+                    }
+
+                    if (!createResponse.ok) {
+                        const errorData = await createResponse.json().catch(() => ({}));
+                        throw new Error(`Failed to create chat room: ${errorData.detail || createResponse.statusText}`);
+                    }
+
+                    const newRoom = await createResponse.json();
+                    console.log(`Created new room with ID: ${newRoom.id}`);
+                    window.location.href = `/chat/rooms/${newRoom.id}/`;
+
+                } catch (error) {
+                    console.error('Error opening/creating chat:', error);
+                    alert(`Error: ${error.message || 'Could not open chat'}`);
+                }
+            }
+
             async function fetchTasks() {
                 try {
                     // Get JWT token
@@ -1977,7 +2163,15 @@
 
                     row.innerHTML = `
                         <td>
-                            <div class="font-medium text-gray-900">${task.title}</div>
+                            <div class="font-medium text-gray-900 flex items-center">
+                                ${task.title}
+                                ${task.document ? `
+                                <span class="document-icon ml-2" title="This task has an attached document">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </span>` : ''}
+                            </div>
                             <div class="text-sm text-gray-500">${task.description ? task.description.substring(0, 50) + (task.description.length > 50 ? '...' : '') : 'No description'}</div>
                         </td>
                         <td>
@@ -1996,8 +2190,20 @@
                         </td>
                         <td>
                             <div class="task-actions">
-                                <a href="/dashboard/tasks/${task.id}/" class="task-action-btn view-btn">View</a>
-                                <button class="task-action-btn update-btn" data-task-id="${task.id}" data-task-title="${task.title}" data-task-status="${task.status}" data-task-progress="${task.progress || 0}">Update</button>
+                                <a href="/dashboard/tasks/${task.id}/" class="task-action-btn view-btn">
+                                    ${task.document ? `
+                                    <span class="flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </path>
+                                        </svg>
+                                        View
+                                    </span>` : 'View'}
+                                </a>
+                                ${task.status !== 'completed' ?
+                                    `<button class="task-action-btn update-btn" data-task-id="${task.id}" data-task-title="${task.title}" data-task-status="${task.status}" data-task-progress="${task.progress || 0}">Update</button>` :
+                                    `<span class="task-completed-badge">Completed</span>`
+                                }
                             </div>
                         </td>
                     `;
@@ -2112,7 +2318,12 @@
                     let dueDateDisplay = dueDate.toLocaleDateString();
                     let dueDateClass = '';
 
-                    if (dueDate <= today) {
+                    // Check if task is completed
+                    if (task.status === 'completed') {
+                        dueDateDisplay = 'Done';
+                        dueDateClass = 'deadline-date-completed';
+                        deadlineItem.classList.add('completed');
+                    } else if (dueDate <= today) {
                         dueDateDisplay = 'Due today!';
                         dueDateClass = 'deadline-date-urgent';
                     } else if (dueDate <= tomorrow) {

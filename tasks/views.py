@@ -982,7 +982,23 @@ class EmployeeTaskListView(generics.ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
 
         # Calculate task statistics
-        all_tasks = Task.objects.filter(assignments__employee=request.user)
+        employee_id = self.kwargs.get('employee_id', None)
+
+        if employee_id and request.user.role == 'Manager':
+            # For managers viewing a specific employee's tasks
+            from users.models import CustomUser
+            try:
+                employee = CustomUser.objects.get(id=employee_id, role='Employee')
+                all_tasks = Task.objects.filter(assignments__employee=employee)
+            except CustomUser.DoesNotExist:
+                all_tasks = Task.objects.none()
+        elif request.user.role == 'Employee':
+            # For employees viewing their own tasks
+            all_tasks = Task.objects.filter(assignments__employee=request.user)
+        else:
+            # For managers viewing all tasks
+            all_tasks = Task.objects.all()
+
         task_stats = {
             'total': all_tasks.count(),
             'completed': all_tasks.filter(status='completed').count(),

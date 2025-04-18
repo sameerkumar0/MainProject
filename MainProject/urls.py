@@ -24,6 +24,7 @@ urlpatterns = [
     # Web URLs - Template views
     path('dashboard/', include('tasks.urls_web')),  # Dashboard and task views
     path('auth/', include('users.urls_web')),  # Authentication and user management views
+    path('chat/', include('chat.urls')),  # Chat system
 ]
 
 # Serve media files in development

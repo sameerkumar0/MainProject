@@ -493,11 +493,6 @@ def manager_dashboard(request):
     return render(request, 'manager_dashboard.html')
 
 
-def employee_tasks_view(request):
-    """View for displaying all employees with their assigned tasks."""
-    return render(request, 'employee_tasks_view.html')
-
-
 class EmployeeTasksAPIView(generics.ListAPIView):
     """API endpoint for retrieving all employees with their assigned tasks."""
     serializer_class = EmployeeTasksSerializer
